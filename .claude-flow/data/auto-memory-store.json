@@ -1,0 +1,28 @@
+[
+  {
+    "id": "mem-MEMORY-memory-index",
+    "key": "memory-index",
+    "content": "- [Fike Shway Brand Reference](project_fike_shway_brand_reference.md) — Canonical brand voice guide: tone, structure, pillars, vocabulary. Apply to ALL content generation.",
+    "summary": "Memory Index",
+    "namespace": "core",
+    "type": "semantic",
+    "metadata": {
+      "sourceFile": "/Users/bonsaibrain/.claude/projects/-Users-bonsaibrain-Documents-Bonsai-Brain---Warp-Claude-Working-File--March-2026/memory/MEMORY.md",
+      "bootstrapped": true
+    },
+    "createdAt": 1774637063525
+  },
+  {
+    "id": "mem-project_fike_shway_brand_reference----",
+    "key": "-",
+    "content": "name: Fike Shway Brand Reference\ndescription: Canonical brand voice guide for all Bonsai Brain content generation — tone, structure, pillars, vocabulary\ntype: project\n---\n\nThe Fike Shway Brand Reference is saved at `docs/fike-shway-brand-reference.md` in the project root.\n\nApply this reference to ALL generated content (captions, blog posts, emails, ad copy, reports).\n\n**Core tone:** Confident authority, action-oriented, direct and punchy, results-obsessed (ROI/phone calls/leads — never vanity me",
+    "summary": "---",
+    "namespace": "project_fike_shway_brand_reference",
+    "type": "semantic",
+    "metadata": {
+      "sourceFile": "/Users/bonsaibrain/.claude/projects/-Users-bonsaibrain-Documents-Bonsai-Brain---Warp-Claude-Working-File--March-2026/memory/project_fike_shway_brand_reference.md",
+      "bootstrapped": true
+    },
+    "createdAt": 1774637063526
+  }
+]

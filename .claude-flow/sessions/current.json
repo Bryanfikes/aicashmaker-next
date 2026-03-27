@@ -1,0 +1,18 @@
+{
+  "id": "session-1774637063522",
+  "startedAt": "2026-03-27T18:44:23.522Z",
+  "cwd": "/Users/bonsaibrain/Documents/Bonsai Brain - Warp Claude Working File  March 2026/aicashmaker-next",
+  "context": {
+    "lastMatchedPatterns": [
+      "mem-project_fike_shway_brand_reference----",
+      "mem-MEMORY-memory-index"
+    ]
+  },
+  "metrics": {
+    "edits": 21,
+    "commands": 0,
+    "tasks": 0,
+    "errors": 0
+  },
+  "updatedAt": "2026-03-27T21:14:16.740Z"
+}

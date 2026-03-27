@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "updatedAt": 1774637063526,
+  "nodeCount": 2,
+  "nodes": {
+    "mem-MEMORY-memory-index": {
+      "id": "mem-MEMORY-memory-index",
+      "category": "core",
+      "confidence": 0.5,
+      "accessCount": 0,
+      "createdAt": 1774637063525
+    },
+    "mem-project_fike_shway_brand_reference----": {
+      "id": "mem-project_fike_shway_brand_reference----",
+      "category": "project_fike_shway_brand_reference",
+      "confidence": 0.5,
+      "accessCount": 0,
+      "createdAt": 1774637063526
+    }
+  },
+  "edges": [],
+  "pageRanks": {
+    "mem-MEMORY-memory-index": 0.5,
+    "mem-project_fike_shway_brand_reference----": 0.5
+  }
+}
