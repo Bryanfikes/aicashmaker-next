@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getPayload } from '@/lib/payload'
 
-export const revalidate = 3600
+export const dynamic = 'force-dynamic'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -33,19 +33,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-export async function generateStaticParams() {
-  try {
-    const payload = await getPayload()
-    const result = await payload.find({
-      collection: 'blog-posts',
-      where: { published: { equals: true } },
-      limit: 500,
-    })
-    return result.docs.map((p: any) => ({ slug: p.slug }))
-  } catch {
-    return []
-  }
-}
+export async function generateStaticParams() { return [] }
 
 const CATEGORY_COLORS: Record<string, string> = {
   ChatGPT: 'bg-emerald-100 text-emerald-700',
