@@ -2,7 +2,7 @@ import { getPayload } from '@/lib/payload'
 import { stripe, ADVERTISING_PACKAGES, PLATFORM_FEE_PERCENT, type AdvertisingPackageId } from '@/lib/stripe'
 import { NextResponse } from 'next/server'
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000'
 
 export async function POST(request: Request) {
   if (!process.env.STRIPE_SECRET_KEY) {

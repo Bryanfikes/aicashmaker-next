@@ -55,7 +55,7 @@ export default buildConfig({
   },
   db: postgresAdapter({
     pool: {
-      connectionString: process.env.DATABASE_URI || '',
+      connectionString: process.env.DATABASE_URI || process.env.DATABASE_URL || '',
     },
   }),
   upload: {
@@ -63,6 +63,6 @@ export default buildConfig({
       fileSize: 5000000, // 5MB
     },
   },
-  cors: [process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'],
-  csrf: [process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'],
+  cors: [process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000'],
+  csrf: [process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000'],
 })
