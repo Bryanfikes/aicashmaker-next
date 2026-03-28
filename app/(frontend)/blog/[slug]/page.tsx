@@ -6,7 +6,7 @@ import { getPayload } from '@/lib/payload'
 export const revalidate = 3600
 
 interface Props {
-  params: { slug: string }
+  params: Promise<{ slug: string }>
 }
 
 async function getPost(slug: string) {
@@ -24,7 +24,8 @@ async function getPost(slug: string) {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const post = await getPost(params.slug)
+  const { slug } = await params
+  const post = await getPost(slug)
   if (!post) return { title: 'Post Not Found' }
   return {
     title: post.title,
@@ -57,7 +58,8 @@ const CATEGORY_COLORS: Record<string, string> = {
 }
 
 export default async function BlogPostPage({ params }: Props) {
-  const post = await getPost(params.slug)
+  const { slug } = await params
+  const post = await getPost(slug)
   if (!post) notFound()
 
   const authorName = typeof post.author === 'object' ? post.author?.name : 'AICashMaker'

@@ -6,7 +6,7 @@ import { getPayload } from '@/lib/payload'
 export const revalidate = 3600
 
 interface Props {
-  params: { slug: string }
+  params: Promise<{ slug: string }>
 }
 
 async function getHustle(slug: string) {
@@ -24,7 +24,8 @@ async function getHustle(slug: string) {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const hustle = await getHustle(params.slug)
+  const { slug } = await params
+  const hustle = await getHustle(slug)
   if (!hustle) return { title: 'Guide Not Found' }
   return {
     title: `${hustle.name} — How to Make ${hustle.incomeLow ? `$${hustle.incomeLow.toLocaleString()}` : 'Money'}+/Month`,
@@ -53,7 +54,8 @@ const DIFFICULTY_LABELS: Record<string, { label: string; color: string }> = {
 }
 
 export default async function SideHustlePage({ params }: Props) {
-  const hustle = await getHustle(params.slug)
+  const { slug } = await params
+  const hustle = await getHustle(slug)
   if (!hustle) notFound()
 
   const incomeRange = hustle.incomeLow && hustle.incomeHigh

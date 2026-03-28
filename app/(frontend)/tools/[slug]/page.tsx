@@ -6,7 +6,7 @@ import { getPayload } from '@/lib/payload'
 export const revalidate = 3600
 
 interface Props {
-  params: { slug: string }
+  params: Promise<{ slug: string }>
 }
 
 async function getTool(slug: string) {
@@ -36,7 +36,8 @@ async function getRelatedTools(slug: string, categoryId?: string) {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const tool = await getTool(params.slug)
+  const { slug } = await params
+  const tool = await getTool(slug)
   if (!tool) return { title: 'Tool Not Found' }
   return {
     title: `${tool.name} Review — Is It Worth It for Making Money?`,
@@ -72,12 +73,13 @@ function StarRating({ rating }: { rating: number }) {
 }
 
 export default async function ToolPage({ params }: Props) {
-  const tool = await getTool(params.slug)
+  const { slug } = await params
+  const tool = await getTool(slug)
   if (!tool) notFound()
 
   const categoryId = typeof tool.category === 'object' ? tool.category?.id : tool.category
   const categoryName = typeof tool.category === 'object' ? tool.category?.name : 'AI Tools'
-  const relatedTools = await getRelatedTools(params.slug, categoryId)
+  const relatedTools = await getRelatedTools(slug, categoryId)
 
   const gradient = tool.iconGradient || 'linear-gradient(135deg, #0ea5e9, #0284c7)'
   const incomeRange = tool.incomeLow && tool.incomeHigh
