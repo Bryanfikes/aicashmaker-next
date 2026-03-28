@@ -8,10 +8,7 @@ export const Products: CollectionConfig = {
     defaultColumns: ['name', 'type', 'price', 'creator', 'approved', 'salesCount'],
   },
   access: {
-    read: ({ doc }) => {
-      if (!doc) return true
-      return doc.approved === true
-    },
+    read: () => true,
   },
   fields: [
     {

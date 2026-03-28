@@ -1,6 +1,7 @@
 import { getPayload } from '@/lib/payload'
 import { stripe, ADVERTISING_PACKAGES, PLATFORM_FEE_PERCENT, type AdvertisingPackageId } from '@/lib/stripe'
 import { NextResponse } from 'next/server'
+import type Stripe from 'stripe'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000'
 
@@ -51,7 +52,7 @@ export async function POST(request: Request) {
       const creator = typeof product.creator === 'object' ? product.creator : null
       const creatorStripeAccount = creator?.stripeAccountId
 
-      const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {
+      const sessionParams: Stripe.Checkout.SessionCreateParams = {
         mode: 'payment',
         line_items: [
           {
@@ -98,7 +99,7 @@ export async function POST(request: Request) {
       const websiteUrl = typeof body.websiteUrl === 'string' ? body.websiteUrl.trim() : ''
       const email = typeof body.email === 'string' ? body.email.trim() : ''
 
-      const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {
+      const sessionParams: Stripe.Checkout.SessionCreateParams = {
         mode: pkg.interval ? 'subscription' : 'payment',
         line_items: [
           {
