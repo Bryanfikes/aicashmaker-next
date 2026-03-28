@@ -6,8 +6,12 @@ let cached: Awaited<ReturnType<typeof getPayloadBase>> | null = null
 let initError: Error | null = null
 
 export async function getPayload() {
-  if (process.env.NEXT_PHASE === PHASE_PRODUCTION_BUILD) {
-    throw new Error('[Payload] Skipping DB init during build phase')
+  // Skip DB init during Vercel/Next.js build phase — no database available at build time
+  if (
+    process.env.NEXT_PHASE === PHASE_PRODUCTION_BUILD ||
+    !process.env.DATABASE_URI && !process.env.DATABASE_URL
+  ) {
+    throw new Error('[Payload] Skipping DB init — no database connection available')
   }
   if (cached) return cached
   if (initError) throw initError
