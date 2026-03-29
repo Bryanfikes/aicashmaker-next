@@ -27,6 +27,12 @@ export const Orders: CollectionConfig = {
       ],
     },
     {
+      name: 'buyer',
+      type: 'relationship',
+      relationTo: 'users',
+      admin: { description: 'Linked user account (if buyer was logged in)' },
+    },
+    {
       name: 'buyerEmail',
       type: 'email',
       required: true,
@@ -34,6 +40,17 @@ export const Orders: CollectionConfig = {
     {
       name: 'buyerName',
       type: 'text',
+    },
+    {
+      name: 'affiliate',
+      type: 'relationship',
+      relationTo: 'affiliates',
+      admin: { description: 'Affiliate who referred this sale (if any)' },
+    },
+    {
+      name: 'affiliateCommission',
+      type: 'number',
+      admin: { description: 'Commission amount in cents paid to affiliate' },
     },
     {
       name: 'product',

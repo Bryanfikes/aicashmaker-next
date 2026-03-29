@@ -13,13 +13,17 @@ const nextConfig: NextConfig = {
   webpack: (config, { isServer }) => {
     if (isServer) {
       // On the server, replace @monaco-editor/react with a safe stub.
-      // Payload's CodeEditor calls useEditorConfig() during SSR; without a
-      // Monaco context it returns undefined, crashing the admin pages.
       config.resolve = config.resolve || {}
       config.resolve.alias = {
         ...(config.resolve.alias || {}),
         '@monaco-editor/react': path.resolve('./mocks/monaco-editor-react.js'),
       }
+      // pino-pretty uses worker_threads which isn't resolvable in webpack bundles
+      config.externals = [
+        ...(Array.isArray(config.externals) ? config.externals : []),
+        'pino-pretty',
+        'worker_threads',
+      ]
     }
     return config
   },

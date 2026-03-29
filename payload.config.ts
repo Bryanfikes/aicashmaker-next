@@ -18,6 +18,8 @@ import { ToolSubmissions } from './collections/ToolSubmissions'
 import { ProductSubmissions } from './collections/ProductSubmissions'
 import { Products } from './collections/Products'
 import { Orders } from './collections/Orders'
+import { Affiliates } from './collections/Affiliates'
+import { AffiliateReferrals } from './collections/AffiliateReferrals'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -46,6 +48,8 @@ export default buildConfig({
     ProductSubmissions,
     Products,
     Orders,
+    Affiliates,
+    AffiliateReferrals,
   ],
   editor: lexicalEditor(),
   sharp,

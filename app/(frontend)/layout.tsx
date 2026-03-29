@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+import { Analytics } from '@vercel/analytics/next'
 import Nav from '@/components/Nav'
 import Footer from '@/components/Footer'
 import './globals.css'
@@ -33,10 +34,20 @@ export default function FrontendLayout({
 }) {
   return (
     <html lang="en" className={inter.variable}>
+      <head>
+        {/* OTTO / Search Atlas dynamic optimization — must be in <head> for OTTO to verify connection */}
+        <script
+          id="sa-dynamic-optimization"
+          data-uuid="d774e5d9-cd91-4ddc-915e-5eb0c240b8f5"
+          src="https://digitaldojo.bonsaimarketingcompany.com/scripts/dynamic_optimization.js"
+          async
+        />
+      </head>
       <body className="font-sans">
         <Nav />
         <main>{children}</main>
         <Footer />
+        <Analytics />
       </body>
     </html>
   )

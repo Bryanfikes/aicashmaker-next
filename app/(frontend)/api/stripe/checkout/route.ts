@@ -1,5 +1,6 @@
 import { getPayload } from '@/lib/payload'
 import { stripe, ADVERTISING_PACKAGES, PLATFORM_FEE_PERCENT, type AdvertisingPackageId } from '@/lib/stripe'
+import { cookies, headers } from 'next/headers'
 import { NextResponse } from 'next/server'
 import type Stripe from 'stripe'
 
@@ -18,6 +19,20 @@ export async function POST(request: Request) {
   }
 
   const type = typeof body.type === 'string' ? body.type : ''
+
+  // Read affiliate referral code from cookie (set by middleware on ?ref= visits)
+  const cookieStore = await cookies()
+  const affiliateRef = cookieStore.get('affiliate_ref')?.value || ''
+
+  // Identify logged-in buyer for order linking
+  let buyerId: string | undefined
+  try {
+    const payload = await getPayload()
+    const { user } = await payload.auth({ headers: await headers() })
+    if (user) buyerId = String(user.id)
+  } catch {
+    // Not authenticated — no buyer link
+  }
 
   try {
     // --- PRODUCT PURCHASE ---
@@ -70,6 +85,8 @@ export async function POST(request: Request) {
         metadata: {
           orderType: 'product',
           productId: product.id,
+          ...(affiliateRef ? { affiliateCode: affiliateRef } : {}),
+          ...(buyerId ? { buyerId } : {}),
         },
         success_url: `${SITE_URL}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${SITE_URL}/marketplace`,
@@ -121,6 +138,7 @@ export async function POST(request: Request) {
           orderType: packageId,
           companyName,
           websiteUrl,
+          ...(buyerId ? { buyerId } : {}),
         },
         ...(email ? { customer_email: email } : {}),
         success_url: `${SITE_URL}/advertise/success?session_id={CHECKOUT_SESSION_ID}`,

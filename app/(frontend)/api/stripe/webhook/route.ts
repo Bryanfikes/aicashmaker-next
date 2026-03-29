@@ -53,10 +53,45 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const metadata = session.metadata ?? {}
   const orderType = metadata.orderType as string
   const amountTotal = session.amount_total ?? 0
+  const buyerEmail = session.customer_details?.email ?? ''
 
   const isProduct = orderType === 'product'
   const platformFee = isProduct ? Math.round(amountTotal * 0.2) : amountTotal
   const creatorPayout = isProduct ? amountTotal - platformFee : 0
+
+  // Resolve buyer user account by ID (from metadata) or fall back to email lookup
+  let buyerId: string | undefined = metadata.buyerId || undefined
+  if (!buyerId && buyerEmail) {
+    const userResult = await payload.find({
+      collection: 'users',
+      where: { email: { equals: buyerEmail } },
+      limit: 1,
+      overrideAccess: true,
+    })
+    if (userResult.docs.length > 0) {
+      buyerId = String(userResult.docs[0].id)
+    }
+  }
+
+  // Resolve affiliate by referral code (only for product purchases)
+  let affiliateId: string | undefined
+  let affiliateCommission = 0
+  const affiliateCode = isProduct ? (metadata.affiliateCode || '') : ''
+  if (affiliateCode) {
+    const affiliateResult = await payload.find({
+      collection: 'affiliates',
+      where: { referralCode: { equals: affiliateCode } },
+      limit: 1,
+      overrideAccess: true,
+    })
+    if (affiliateResult.docs.length > 0) {
+      const affiliate = affiliateResult.docs[0] as { id: string; commissionRate: number; status: string }
+      if (affiliate.status === 'active') {
+        affiliateId = String(affiliate.id)
+        affiliateCommission = Math.round(amountTotal * (affiliate.commissionRate / 100))
+      }
+    }
+  }
 
   // Upsert order record
   const existing = await payload.find({
@@ -66,12 +101,18 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     overrideAccess: true,
   })
 
+  let orderId: string
+
   if (existing.totalDocs > 0) {
+    orderId = String(existing.docs[0].id)
     await payload.update({
       collection: 'orders',
-      id: existing.docs[0].id as string,
+      id: orderId,
       data: {
         status: 'paid',
+        buyer: buyerId,
+        affiliate: affiliateId,
+        affiliateCommission: affiliateCommission || undefined,
         stripePaymentIntentId: typeof session.payment_intent === 'string'
           ? session.payment_intent
           : undefined,
@@ -79,13 +120,16 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       overrideAccess: true,
     })
   } else {
-    await payload.create({
+    const created = await payload.create({
       collection: 'orders',
       data: {
         orderType: mapOrderType(orderType),
-        buyerEmail: session.customer_details?.email ?? '',
+        buyerEmail,
         buyerName: session.customer_details?.name ?? undefined,
+        buyer: buyerId,
         product: isProduct ? metadata.productId : undefined,
+        affiliate: affiliateId,
+        affiliateCommission: affiliateCommission || undefined,
         amount: amountTotal,
         platformFee,
         creatorPayout,
@@ -100,6 +144,39 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
               websiteUrl: metadata.websiteUrl ?? '',
             }
           : undefined,
+      },
+      overrideAccess: true,
+    })
+    orderId = String(created.id)
+  }
+
+  // Record affiliate conversion and update affiliate stats
+  if (affiliateId && affiliateCommission > 0) {
+    await payload.create({
+      collection: 'affiliate-referrals',
+      data: {
+        affiliate: affiliateId,
+        order: orderId,
+        type: 'conversion',
+        referralCode: affiliateCode,
+        commission: affiliateCommission,
+        status: 'pending',
+      },
+      overrideAccess: true,
+    })
+
+    const affiliateDoc = await payload.findByID({
+      collection: 'affiliates',
+      id: affiliateId,
+      overrideAccess: true,
+    }) as { totalConversions?: number; totalEarned?: number }
+
+    await payload.update({
+      collection: 'affiliates',
+      id: affiliateId,
+      data: {
+        totalConversions: (affiliateDoc.totalConversions ?? 0) + 1,
+        totalEarned: (affiliateDoc.totalEarned ?? 0) + affiliateCommission,
       },
       overrideAccess: true,
     })
@@ -123,8 +200,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     }
   }
 
-  // TODO Phase 5: send download link email to buyer via Resend
-  console.log(`[StripeWebhook] Order paid: ${session.id} (${orderType}) — $${(amountTotal / 100).toFixed(2)}`)
+  console.log(`[StripeWebhook] Order paid: ${session.id} (${orderType}) — $${(amountTotal / 100).toFixed(2)}${affiliateId ? ` | affiliate commission: $${(affiliateCommission / 100).toFixed(2)}` : ''}`)
 }
 
 async function handleCheckoutExpired(session: Stripe.Checkout.Session) {
