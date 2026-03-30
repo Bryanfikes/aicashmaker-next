@@ -2,6 +2,7 @@ import { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getPayload } from '@/lib/payload'
+import { convertLexicalToHTML } from '@payloadcms/richtext-lexical/html'
 
 export const dynamic = 'force-dynamic'
 
@@ -132,7 +133,7 @@ export default async function SideHustlePage({ params }: Props) {
             {/* Body content */}
             {hustle.body && (
               <div className="prose-content mb-10">
-                <div dangerouslySetInnerHTML={{ __html: hustle.body }} />
+                <div dangerouslySetInnerHTML={{ __html: convertLexicalToHTML({ data: hustle.body, disableContainer: true }) }} />
               </div>
             )}
 

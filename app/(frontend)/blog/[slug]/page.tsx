@@ -2,6 +2,7 @@ import { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getPayload } from '@/lib/payload'
+import { convertLexicalToHTML } from '@payloadcms/richtext-lexical/html'
 
 export const dynamic = 'force-dynamic'
 
@@ -151,7 +152,7 @@ export default async function BlogPostPage({ params }: Props) {
             {/* Article body */}
             <article className="prose-content mb-10">
               {post.body ? (
-                <div dangerouslySetInnerHTML={{ __html: post.body }} />
+                <div dangerouslySetInnerHTML={{ __html: convertLexicalToHTML({ data: post.body, disableContainer: true }) }} />
               ) : (
                 <div className="space-y-4 text-slate-600">
                   <p>Full article content is coming soon. In the meantime, explore our pillar guides below.</p>

@@ -2,6 +2,7 @@ import { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getPayload } from '@/lib/payload'
+import { convertLexicalToHTML } from '@payloadcms/richtext-lexical/html'
 
 export const dynamic = 'force-dynamic'
 
@@ -147,10 +148,9 @@ export default async function ToolPage({ params }: Props) {
             )}
 
             {/* Review body */}
-            {tool.reviewBody && (
+            {tool.fullReview && (
               <div className="prose-content mb-10">
-                {/* Rich text rendered as HTML — in production use @payloadcms/richtext-lexical/react */}
-                <div dangerouslySetInnerHTML={{ __html: tool.reviewBody }} />
+                <div dangerouslySetInnerHTML={{ __html: convertLexicalToHTML({ data: tool.fullReview, disableContainer: true }) }} />
               </div>
             )}
 
