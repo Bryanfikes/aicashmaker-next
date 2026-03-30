@@ -1,5 +1,5 @@
 /**
- * Blog post automation script
+ * Blog post automation script — uses Payload REST API
  * Usage: npx tsx scripts/post-blog.ts --title "..." --slug "..." --excerpt "..." --category "..." --html-file "/path/to/content.html" [--read-time 8]
  *
  * Categories: AI Side Hustles | AI Tools | Best AI Tools | AI SEO | AI Automation | AI Marketing | Tutorials | Income Reports
@@ -13,8 +13,9 @@ import fs from 'fs'
 expand(dotenvConfig({ path: path.resolve(process.cwd(), '.env.local') }))
 expand(dotenvConfig({ path: path.resolve(process.cwd(), '.env') }))
 
-import { getPayload } from 'payload'
-import config from '../payload.config'
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.aicashmaker.com'
+const ADMIN_EMAIL = process.env.PAYLOAD_ADMIN_EMAIL || 'admin@aicashmaker.com'
+const ADMIN_PASSWORD = process.env.PAYLOAD_ADMIN_PASSWORD || 'ChangeMe123!'
 
 function arg(name: string): string | undefined {
   const idx = process.argv.indexOf(`--${name}`)
@@ -30,19 +31,6 @@ function slugify(text: string): string {
     .trim()
 }
 
-// Minimal valid empty Lexical state for the required body field
-const EMPTY_LEXICAL_STATE = {
-  root: {
-    children: [{ children: [], direction: null, format: '', indent: 0, type: 'paragraph', version: 1 }],
-    direction: null,
-    format: '',
-    indent: 0,
-    type: 'root',
-    version: 1,
-  },
-}
-
-// Gradient palette — cycles based on slug hash
 const GRADIENTS = [
   'linear-gradient(135deg,#0ea5e9,#0284c7)',
   'linear-gradient(135deg,#10b981,#059669)',
@@ -57,6 +45,41 @@ const GRADIENTS = [
 function pickGradient(slug: string): string {
   const hash = slug.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
   return GRADIENTS[hash % GRADIENTS.length]
+}
+
+const EMPTY_BODY = {
+  root: {
+    children: [
+      {
+        children: [
+          { detail: 0, format: 0, mode: 'normal', style: '', text: ' ', type: 'text', version: 1 },
+        ],
+        direction: 'ltr',
+        format: '',
+        indent: 0,
+        type: 'paragraph',
+        version: 1,
+      },
+    ],
+    direction: 'ltr',
+    format: '',
+    indent: 0,
+    type: 'root',
+    version: 1,
+  },
+}
+
+async function login(): Promise<string> {
+  const res = await fetch(`${SITE_URL}/api/users/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD }),
+  })
+  const data = await res.json() as { token?: string; errors?: any[] }
+  if (!data.token) {
+    throw new Error(`Login failed: ${JSON.stringify(data)}`)
+  }
+  return data.token
 }
 
 async function run() {
@@ -74,7 +97,7 @@ async function run() {
     console.error('  npx tsx scripts/post-blog.ts \\')
     console.error('    --title "10 Ways to Make Money with ChatGPT" \\')
     console.error('    --slug "10-ways-to-make-money-with-chatgpt" \\')
-    console.error('    --excerpt "From freelance writing to SaaS, here are the top ways..." \\')
+    console.error('    --excerpt "From freelance writing to SaaS..." \\')
     console.error('    --category "AI Side Hustles" \\')
     console.error('    --html-file /tmp/post-content.html \\')
     console.error('    --read-time 8\n')
@@ -89,60 +112,72 @@ async function run() {
   const contentHtml = fs.readFileSync(htmlFile, 'utf-8')
 
   console.log(`\n📝  Posting: "${title}"`)
-  console.log(`   Slug:     ${slug}`)
-  console.log(`   Category: ${category}`)
+  console.log(`   Slug:      ${slug}`)
+  console.log(`   Category:  ${category}`)
   console.log(`   Read time: ${readTime} min`)
+  console.log(`   Site:      ${SITE_URL}`)
 
-  const payload = await getPayload({ config })
+  // Authenticate
+  console.log('\n🔐  Logging in...')
+  const token = await login()
+  console.log('   ✓ Token received')
 
-  // Get admin user to satisfy author field
-  const users = await payload.find({ collection: 'users', limit: 1, overrideAccess: true })
-  if (users.totalDocs === 0) {
-    console.error('\n❌  No users found. Run scripts/seed-admin.ts first.\n')
-    process.exit(1)
-  }
-  const adminUser = users.docs[0]
-
-  // Check for slug collision and auto-increment if needed
-  const existing = await payload.find({
-    collection: 'blog-posts',
-    where: { slug: { equals: slug } },
-    limit: 1,
-    overrideAccess: true,
+  // Get admin user ID
+  const usersRes = await fetch(`${SITE_URL}/api/users?limit=1`, {
+    headers: { Authorization: `JWT ${token}` },
   })
-  if (existing.totalDocs > 0) {
+  const usersData = await usersRes.json() as { docs: { id: string }[] }
+  const adminId = usersData.docs[0]?.id
+  if (!adminId) throw new Error('No admin user found')
+
+  // Check for slug collision
+  const checkRes = await fetch(`${SITE_URL}/api/blog-posts?where[slug][equals]=${slug}&limit=1`, {
+    headers: { Authorization: `JWT ${token}` },
+  })
+  const checkData = await checkRes.json() as { totalDocs: number }
+  if (checkData.totalDocs > 0) {
     slug = `${slug}-${Date.now()}`
     console.log(`   ⚠️  Slug collision — using: ${slug}`)
   }
 
-  const post = await payload.create({
-    collection: 'blog-posts',
-    data: {
+  // Create the post
+  console.log('\n📤  Creating post...')
+  const createRes = await fetch(`${SITE_URL}/api/blog-posts`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `JWT ${token}`,
+    },
+    body: JSON.stringify({
       title,
       slug,
       excerpt,
-      category: category as any,
+      category,
       authorName,
-      author: adminUser.id,
-      body: EMPTY_LEXICAL_STATE as any,
+      author: adminId,
+      body: EMPTY_BODY,
       contentHtml,
       featuredImageGradient: pickGradient(slug),
       readTimeMinutes: readTime,
       published: true,
       publishedAt: new Date().toISOString(),
-    },
-    overrideAccess: true,
+    }),
   })
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.aicashmaker.com'
-  console.log(`\n✅  Published!`)
-  console.log(`   ID:   ${post.id}`)
-  console.log(`   Live: ${siteUrl}/blog/${slug}\n`)
+  const post = await createRes.json() as { doc?: { id: string }; errors?: any[] }
 
-  process.exit(0)
+  if (!createRes.ok || post.errors) {
+    console.error('\n❌  Failed to create post:')
+    console.error(JSON.stringify(post, null, 2))
+    process.exit(1)
+  }
+
+  console.log(`\n✅  Published!`)
+  console.log(`   ID:   ${post.doc?.id}`)
+  console.log(`   Live: ${SITE_URL}/blog/${slug}\n`)
 }
 
 run().catch((err) => {
-  console.error('❌  Failed:', err)
+  console.error('❌  Failed:', err.message || err)
   process.exit(1)
 })
