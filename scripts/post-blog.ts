@@ -89,18 +89,17 @@ async function run() {
   const htmlFile = arg('html-file')
   const readTime = parseInt(arg('read-time') || '7', 10)
   const authorName = arg('author-name') || 'AICashMaker Editorial'
+  const updateSlug = arg('update-slug') // PATCH mode: update existing post by slug
   let slug = arg('slug') || (title ? slugify(title) : '')
 
-  if (!title || !excerpt || !htmlFile) {
-    console.error('\n❌  Missing required args: --title, --excerpt, --html-file\n')
-    console.error('Example:')
-    console.error('  npx tsx scripts/post-blog.ts \\')
-    console.error('    --title "10 Ways to Make Money with ChatGPT" \\')
-    console.error('    --slug "10-ways-to-make-money-with-chatgpt" \\')
-    console.error('    --excerpt "From freelance writing to SaaS..." \\')
-    console.error('    --category "AI Side Hustles" \\')
-    console.error('    --html-file /tmp/post-content.html \\')
-    console.error('    --read-time 8\n')
+  if (!htmlFile) {
+    console.error('\n❌  Missing required arg: --html-file\n')
+    process.exit(1)
+  }
+
+  if (!updateSlug && (!title || !excerpt)) {
+    console.error('\n❌  For new posts: --title, --excerpt, --html-file are required')
+    console.error('    For updating existing posts: --update-slug, --html-file\n')
     process.exit(1)
   }
 
@@ -111,16 +110,54 @@ async function run() {
 
   const contentHtml = fs.readFileSync(htmlFile, 'utf-8')
 
-  console.log(`\n📝  Posting: "${title}"`)
-  console.log(`   Slug:      ${slug}`)
-  console.log(`   Category:  ${category}`)
-  console.log(`   Read time: ${readTime} min`)
-  console.log(`   Site:      ${SITE_URL}`)
+  console.log(`\n📝  Mode: ${updateSlug ? `UPDATE (${updateSlug})` : `CREATE (${slug})`}`)
+  console.log(`   Site: ${SITE_URL}`)
 
   // Authenticate
   console.log('\n🔐  Logging in...')
   const token = await login()
   console.log('   ✓ Token received')
+
+  // PATCH mode — update existing post
+  if (updateSlug) {
+    const findRes = await fetch(
+      `${SITE_URL}/api/blog-posts?where[slug][equals]=${updateSlug}&limit=1`,
+      { headers: { Authorization: `JWT ${token}` } }
+    )
+    const findData = await findRes.json() as { docs: { id: string }[] }
+    const post = findData.docs[0]
+    if (!post) {
+      console.error(`\n❌  No post found with slug: ${updateSlug}\n`)
+      process.exit(1)
+    }
+
+    console.log(`\n📤  Patching post ID ${post.id}...`)
+    const patchRes = await fetch(`${SITE_URL}/api/blog-posts/${post.id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `JWT ${token}`,
+      },
+      body: JSON.stringify({ contentHtml }),
+    })
+    const patchData = await patchRes.json() as { doc?: { id: string }; errors?: any[] }
+
+    if (!patchRes.ok || patchData.errors) {
+      console.error('\n❌  Failed to update post:')
+      console.error(JSON.stringify(patchData, null, 2))
+      process.exit(1)
+    }
+
+    console.log(`\n✅  Updated!`)
+    console.log(`   Live: ${SITE_URL}/blog/${updateSlug}\n`)
+    return
+  }
+
+  // CREATE mode
+  console.log(`   Title:     ${title}`)
+  console.log(`   Slug:      ${slug}`)
+  console.log(`   Category:  ${category}`)
+  console.log(`   Read time: ${readTime} min`)
 
   // Get admin user ID
   const usersRes = await fetch(`${SITE_URL}/api/users?limit=1`, {
