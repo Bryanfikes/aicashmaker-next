@@ -21,6 +21,7 @@ import { Orders } from './collections/Orders'
 import { Affiliates } from './collections/Affiliates'
 import { AffiliateReferrals } from './collections/AffiliateReferrals'
 import { Prompts } from './collections/Prompts'
+import { Automations } from './collections/Automations'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -52,6 +53,7 @@ export default buildConfig({
     Affiliates,
     AffiliateReferrals,
     Prompts,
+    Automations,
   ],
   editor: lexicalEditor(),
   sharp,

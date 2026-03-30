@@ -1,27 +1,48 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { getPayload } from '@/lib/payload'
+
+export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
-  title: 'AI Automation Templates & Workflows',
-  description: 'Browse ready-to-deploy AI automation templates for Make.com, Zapier, n8n, and more. Import once, save hundreds of hours every month.',
+  title: 'AI Automation Templates — Make.com, Zapier & n8n Workflows',
+  description: 'Browse 20+ ready-to-deploy AI automation templates for Make.com, Zapier, n8n, and more. Import once, save hundreds of hours every month.',
 }
 
-const AUTOMATIONS = [
-  { platform: 'Make.com', platformColor: 'bg-violet-100 text-violet-700', complexity: 'Intermediate', complexityColor: 'bg-amber-100 text-amber-700', title: 'AI Lead Generation Bot', category: 'Lead Gen', desc: 'Automatically scrapes qualified leads from LinkedIn and websites, enriches data with Apollo.io, and delivers personalized cold emails via Gmail — all on autopilot 24/7.', features: ['Scrapes and qualifies 50-200 leads per day from LinkedIn', 'Enriches lead data with verified email addresses', 'Generates personalized outreach emails with ChatGPT'], price: '$49' },
-  { platform: 'n8n', platformColor: 'bg-amber-100 text-amber-700', complexity: 'Beginner', complexityColor: 'bg-emerald-100 text-emerald-700', title: 'Blog Content Pipeline', category: 'Content', desc: 'A fully automated content production pipeline that takes a keyword list and outputs SEO-optimized, published blog posts — complete with images, meta tags, and internal links.', features: ['Generates content briefs from target keywords via Surfer SEO', 'Writes full articles using Claude or ChatGPT API', 'Publishes directly to WordPress with featured images'], price: '$39' },
-  { platform: 'Make.com', platformColor: 'bg-violet-100 text-violet-700', complexity: 'Beginner', complexityColor: 'bg-emerald-100 text-emerald-700', title: 'Social Media Autopilot', category: 'Social Media', desc: 'Auto-generates and schedules a week\'s worth of social content across Instagram, LinkedIn, X, and Facebook from a single topic brief. Includes Canva image generation via API.', features: ['Creates platform-optimized captions for 4 networks at once', 'Generates on-brand visual assets using Canva API', 'Schedules posts at optimal engagement times via Buffer'], price: '$29' },
-  { platform: 'Zapier', platformColor: 'bg-red-100 text-red-700', complexity: 'Beginner', complexityColor: 'bg-emerald-100 text-emerald-700', title: 'Email Follow-up Sequence', category: 'Sales', desc: 'Triggers a 5-step AI-personalized email follow-up sequence whenever a lead fills out a form, books a call, or downloads a lead magnet — dramatically increasing conversion rates.', features: ['Detects new leads from Typeform, Calendly, or HubSpot', 'Personalizes each email with ChatGPT based on lead data', 'Sends 5-email sequence via ActiveCampaign or Klaviyo'], price: '$19' },
-  { platform: 'Make.com', platformColor: 'bg-violet-100 text-violet-700', complexity: 'Beginner', complexityColor: 'bg-emerald-100 text-emerald-700', title: 'AI Product Description Generator', category: 'E-commerce', desc: 'Reads product titles and images from a Shopify or WooCommerce store and auto-generates compelling, SEO-friendly product descriptions using GPT-4. Handles 100+ products per hour.', features: ['Pulls product data from your e-commerce store via API', 'Generates unique, keyword-rich product descriptions', 'Pushes descriptions back to your store automatically'], price: '$29' },
-  { platform: 'n8n', platformColor: 'bg-amber-100 text-amber-700', complexity: 'Intermediate', complexityColor: 'bg-amber-100 text-amber-700', title: 'YouTube SEO Optimizer', category: 'Content', desc: 'Automatically generates optimized YouTube titles, descriptions, tags, and chapter markers for every new video upload. Pulls keyword data from TubeBuddy and VidIQ APIs.', features: ['Triggers on new YouTube upload via YouTube Data API', 'Generates A/B title variants with click-rate predictions', 'Auto-populates description, timestamps, and keyword tags'], price: '$39' },
-  { platform: 'Zapier', platformColor: 'bg-red-100 text-red-700', complexity: 'Beginner', complexityColor: 'bg-emerald-100 text-emerald-700', title: 'AI Review Responder', category: 'Marketing', desc: 'Monitors Google, Yelp, and Trustpilot for new reviews and auto-generates personalized, on-brand responses within minutes. Never miss a review again — positive or negative.', features: ['Monitors review platforms in real-time for new submissions', 'Analyzes sentiment and crafts appropriate responses via AI', 'Posts approved responses or sends for human review first'], price: '$19' },
-  { platform: 'Make.com', platformColor: 'bg-violet-100 text-violet-700', complexity: 'Advanced', complexityColor: 'bg-red-100 text-red-700', title: 'Lead Scoring System', category: 'Sales', desc: 'Automatically scores and prioritizes inbound leads using AI analysis of firmographic data, behavior patterns, and engagement signals — routing hot leads directly to your sales team.', features: ['Aggregates lead data from CRM, email, and website analytics', 'Scores leads 1-100 using customizable AI criteria', 'Routes hot leads to Slack, SMS, or CRM with full context'], price: '$99' },
-  { platform: 'n8n', platformColor: 'bg-amber-100 text-amber-700', complexity: 'Intermediate', complexityColor: 'bg-amber-100 text-amber-700', title: 'Content Repurposing Machine', category: 'Content', desc: 'Takes any long-form content (blogs, podcasts, videos) and automatically repurposes it into 8+ formats — social posts, email newsletters, Twitter threads, short clips, and more.', features: ['Ingests content via URL, RSS feed, or file upload', 'Extracts key insights and creates 8 derivative content pieces', 'Distributes each format to the appropriate platform automatically'], price: '$59' },
-  { platform: 'Zapier', platformColor: 'bg-red-100 text-red-700', complexity: 'Beginner', complexityColor: 'bg-emerald-100 text-emerald-700', title: 'AI Newsletter Generator', category: 'Marketing', desc: 'Automatically curates the best content from your RSS feeds, industry news, and social channels and compiles it into a polished, branded newsletter ready to send every week.', features: ['Pulls and summarizes top content from 10+ sources weekly', 'Formats content into a ready-to-send newsletter template', 'Sends draft to ConvertKit, Mailchimp, or Beehiiv for review'], price: '$29' },
-  { platform: 'Make.com', platformColor: 'bg-violet-100 text-violet-700', complexity: 'Intermediate', complexityColor: 'bg-amber-100 text-amber-700', title: 'Shopify Product Optimizer', category: 'E-commerce', desc: 'Monitors Shopify product performance metrics and automatically A/B tests product titles, descriptions, and images — optimizing for conversion rate and SEO rankings simultaneously.', features: ['Analyzes product conversion data and identifies underperformers', 'Generates 3 variant titles and descriptions for A/B testing', 'Implements winners and reports results to a Notion dashboard'], price: '$79' },
-  { platform: 'n8n', platformColor: 'bg-amber-100 text-amber-700', complexity: 'Advanced', complexityColor: 'bg-red-100 text-red-700', title: 'LinkedIn Outreach Bot', category: 'Lead Gen', desc: 'A sophisticated LinkedIn automation that identifies ideal prospects, sends hyper-personalized connection requests, and executes a 3-step follow-up sequence — all within LinkedIn\'s limits.', features: ['Identifies and qualifies prospects using custom ICP filters', 'Crafts personalized messages using LinkedIn profile data + AI', 'Manages multi-touch follow-up sequences with reply detection'], price: '$149' },
-]
+const PLATFORM_STYLES: Record<string, { badge: string; dot: string }> = {
+  'Make.com':   { badge: 'bg-violet-100 text-violet-700', dot: 'bg-violet-500' },
+  'Zapier':     { badge: 'bg-orange-100 text-orange-700', dot: 'bg-orange-500' },
+  'n8n':        { badge: 'bg-amber-100 text-amber-700',   dot: 'bg-amber-500' },
+  'Custom API': { badge: 'bg-sky-100 text-sky-700',       dot: 'bg-sky-500' },
+}
 
-export default function AutomationsPage() {
+const COMPLEXITY_COLORS: Record<string, string> = {
+  Beginner:     'bg-emerald-100 text-emerald-700',
+  Intermediate: 'bg-amber-100 text-amber-700',
+  Advanced:     'bg-red-100 text-red-700',
+}
+
+async function getAutomations() {
+  try {
+    const payload = await getPayload()
+    const result = await payload.find({
+      collection: 'automations',
+      where: { published: { equals: true } },
+      limit: 100,
+      sort: '-createdAt',
+    })
+    return result.docs
+  } catch {
+    return []
+  }
+}
+
+export default async function AutomationsPage() {
+  const all = await getAutomations()
+  const featured = all.filter((a: any) => a.featured)
+  const rest = all.filter((a: any) => !a.featured)
+  const display = rest.length > 0 ? rest : all
+
   return (
     <>
       {/* Breadcrumb */}
@@ -59,68 +80,139 @@ export default function AutomationsPage() {
         </div>
       </section>
 
-      {/* Filters */}
-      <div className="bg-white border-b border-slate-100 px-4 py-3">
-        <div className="max-w-7xl mx-auto flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-bold text-slate-700 mr-1">Platform:</span>
-          {['All', 'Make.com', 'Zapier', 'n8n', 'Custom'].map((f, i) => (
-            <button key={f} className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${i === 0 ? 'bg-emerald-500 text-white border-emerald-500' : 'border-slate-200 text-slate-600 hover:border-emerald-400'}`}>{f}</button>
-          ))}
-          <div className="w-px h-5 bg-slate-200 mx-1" />
-          <span className="text-xs font-bold text-slate-700 mr-1">Category:</span>
-          {['Lead Gen', 'Content', 'Social', 'Sales', 'Marketing', 'E-commerce'].map(f => (
-            <button key={f} className="px-3 py-1.5 rounded-full text-xs font-medium border border-slate-200 text-slate-600 hover:border-emerald-400 transition-colors">{f}</button>
+      {/* Pillar quick-links */}
+      <div className="bg-white border-b border-slate-100">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-2 overflow-x-auto">
+          <span className="text-xs font-bold text-slate-400 flex-shrink-0 mr-1">Explore:</span>
+          {[
+            ['/tools', '🛠️ AI Tools'],
+            ['/side-hustles', '💰 Side Hustles'],
+            ['/prompts', '✨ Prompts'],
+            ['/blog', '📝 Income Guides'],
+          ].map(([href, label]) => (
+            <Link key={href} href={href} className="flex-shrink-0 text-xs font-medium px-3 py-1.5 rounded-full border border-slate-200 text-slate-600 hover:border-emerald-400 hover:text-emerald-600 transition-colors no-underline">
+              {label}
+            </Link>
           ))}
         </div>
       </div>
 
-      {/* Grid */}
       <div className="max-w-7xl mx-auto px-4 py-10" id="automations">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-extrabold text-slate-900">{AUTOMATIONS.length} AI Automation Templates</h2>
-          <span className="text-sm text-slate-400">All templates include setup instructions</span>
-        </div>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {AUTOMATIONS.map(({ platform, platformColor, complexity, complexityColor, title, category, desc, features, price }) => (
-            <div key={title} className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col hover:border-emerald-300 hover:shadow-md transition-all">
-              <div className="flex items-center justify-between mb-3">
-                <span className={`text-xs font-bold px-2.5 py-1 rounded-md uppercase tracking-wide ${platformColor}`}>{platform}</span>
-                <span className={`text-xs font-semibold px-2 py-0.5 rounded ${complexityColor}`}>{complexity}</span>
-              </div>
-              <h3 className="text-sm font-extrabold text-slate-900 mb-1">{title}</h3>
-              <span className="text-xs text-slate-400 uppercase font-semibold tracking-wide mb-2">{category}</span>
-              <p className="text-xs text-slate-500 leading-relaxed mb-3">{desc}</p>
-              <div className="mb-3">
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">What It Does</h4>
-                <ul className="space-y-1.5">
-                  {features.map(f => (
-                    <li key={f} className="flex items-start gap-2 text-xs text-slate-700">
-                      <span className="text-emerald-500 font-bold flex-shrink-0">✓</span>{f}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-100">
-                <div>
-                  <span className="text-xl font-extrabold text-slate-900">{price}</span>
-                  <span className="text-xs text-slate-400 ml-1">one-time</span>
-                </div>
-                <button className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-4 py-2 rounded-lg text-xs transition-colors">
-                  Get Automation →
-                </button>
-              </div>
+
+        {/* Stats bar */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
+          {[
+            [String(all.length) + '+', 'Automation Templates'],
+            ['4', 'Platforms Supported'],
+            ['10+', 'Use Case Categories'],
+            ['80%', 'Creator Revenue Share'],
+          ].map(([val, label]) => (
+            <div key={label} className="bg-white border border-slate-200 rounded-xl p-4 text-center">
+              <div className="text-2xl font-extrabold text-emerald-600">{val}</div>
+              <div className="text-xs text-slate-500 mt-1">{label}</div>
             </div>
           ))}
         </div>
+
+        {/* Featured */}
+        {featured.length > 0 && (
+          <div className="mb-12">
+            <h2 className="text-xl font-extrabold text-slate-900 mb-6">Featured Automations</h2>
+            <div className="grid md:grid-cols-3 gap-5">
+              {featured.map((a: any) => {
+                const ps = PLATFORM_STYLES[a.platform] || PLATFORM_STYLES['Custom API']
+                return (
+                  <Link key={a.slug} href={`/automations/${a.slug}`} className="relative bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-6 border border-emerald-500/20 overflow-hidden no-underline hover:border-emerald-400/40 transition-colors block">
+                    <span className="absolute top-4 right-4 bg-gradient-to-r from-emerald-600 to-emerald-400 text-white text-xs font-bold px-2.5 py-1 rounded-full">FEATURED</span>
+                    <div className="flex items-center gap-1.5 mb-3">
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${ps.badge}`}>{a.platform}</span>
+                      <span className="text-xs text-slate-400">{a.category}</span>
+                    </div>
+                    <h3 className="text-base font-extrabold text-white mb-2 pr-20">{a.title}</h3>
+                    <p className="text-xs text-slate-400 leading-relaxed mb-4 line-clamp-3">{a.excerpt}</p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-2xl font-extrabold text-emerald-400">${a.price}</span>
+                      {a.timeSaved && <span className="text-xs text-slate-400">⏱ {a.timeSaved}</span>}
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* All automations */}
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-extrabold text-slate-900">All Automation Templates</h2>
+          <span className="text-sm text-slate-400">Showing {all.length} templates</span>
+        </div>
+
+        {all.length === 0 ? (
+          <div className="text-center py-20 text-slate-400">
+            <p className="text-lg font-semibold mb-2">Coming soon</p>
+            <p className="text-sm">Automation templates are being added now.</p>
+          </div>
+        ) : (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {display.map((a: any) => {
+              const ps = PLATFORM_STYLES[a.platform] || PLATFORM_STYLES['Custom API']
+              const cc = COMPLEXITY_COLORS[a.complexity] || COMPLEXITY_COLORS.Beginner
+              const features: { feature: string }[] = a.features || []
+              return (
+                <div key={a.slug} className="bg-white border border-slate-200 rounded-2xl flex flex-col hover:border-emerald-300 hover:shadow-md transition-all">
+                  <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-slate-100">
+                    <div className="flex items-center gap-1.5">
+                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${ps.badge}`}>{a.platform}</span>
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${cc}`}>{a.complexity}</span>
+                    </div>
+                    <span className="text-xl font-extrabold text-slate-900">${a.price}</span>
+                  </div>
+                  <div className="px-4 py-3 flex-1">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">{a.category}</p>
+                    <h3 className="text-sm font-bold text-slate-900 mb-2 line-clamp-2">{a.title}</h3>
+                    <p className="text-xs text-slate-500 leading-relaxed mb-3 line-clamp-2">{a.excerpt}</p>
+                    {features.slice(0, 2).map((f, i) => (
+                      <div key={i} className="flex items-start gap-1.5 text-xs text-slate-500 mb-1">
+                        <span className="text-emerald-500 flex-shrink-0 mt-0.5">✓</span>
+                        <span className="line-clamp-1">{f.feature}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="px-4 pb-4 flex gap-2">
+                    <Link href={`/automations/${a.slug}`} className="flex-1 text-center bg-white border border-slate-200 hover:border-emerald-400 text-slate-700 font-semibold py-2 rounded-lg text-xs transition-colors no-underline">
+                      Preview
+                    </Link>
+                    <Link href={`/automations/${a.slug}`} className="flex-1 text-center bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 rounded-lg text-xs transition-colors no-underline">
+                      Get Template
+                    </Link>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
 
-      {/* Submit CTA */}
-      <section className="bg-slate-50 border-t border-slate-200 py-14 px-4 text-center">
-        <div className="max-w-xl mx-auto">
-          <h2 className="text-xl font-extrabold text-slate-900 mb-3">Have an automation to sell?</h2>
-          <p className="text-slate-500 text-sm mb-6">Submit your workflow template to AICashMaker and start earning. Keep 80% of every sale.</p>
-          <Link href="/submit-product" className="inline-block bg-sky-500 hover:bg-sky-600 text-white font-bold px-6 py-3 rounded-xl text-sm transition-colors no-underline">
-            Submit a Workflow →
+      {/* Sell section */}
+      <section className="bg-gradient-to-br from-slate-900 to-emerald-950 py-16 px-4 text-center mt-8">
+        <div className="max-w-2xl mx-auto">
+          <h2 className="text-3xl font-extrabold text-white mb-4">Sell Your Automations</h2>
+          <p className="text-slate-400 text-base mb-8">Built a workflow that saves hours every week? Sell it here. Keep 80% of every sale. Thousands of businesses are looking for exactly what you&apos;ve built.</p>
+          <div className="grid md:grid-cols-3 gap-4 mb-8">
+            {[
+              ['1', 'Export Your Workflow', 'Export your Make.com, Zapier, or n8n template as a shareable file or JSON.'],
+              ['2', 'Submit for Review', 'We review every template for quality. Most are approved within 48 hours.'],
+              ['3', 'Earn Passively', '80% of every sale goes directly to you via Stripe. Set it and forget it.'],
+            ].map(([num, title, desc]) => (
+              <div key={num} className="bg-white/5 border border-white/10 rounded-xl p-5 text-left">
+                <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white font-black text-sm mb-3 mx-auto">{num}</div>
+                <h4 className="text-white font-bold text-sm mb-1.5">{title}</h4>
+                <p className="text-slate-400 text-xs leading-relaxed">{desc}</p>
+              </div>
+            ))}
+          </div>
+          <Link href="/submit-product" className="inline-block bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-8 py-3.5 rounded-xl text-sm transition-colors no-underline">
+            Submit Your Automation →
           </Link>
         </div>
       </section>
