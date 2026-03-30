@@ -63,12 +63,12 @@ async function getStats() {
     const totalRevenue = paidOrders.docs.reduce((sum: number, o: any) => sum + (o.amount || 0), 0)
     const totalPlatformFee = paidOrders.docs.reduce((sum: number, o: any) => sum + (o.platformFee || 0), 0)
 
-    const pendingSubs = toolSubs.docs.filter ? await payload.find({
+    const pendingSubs = await payload.find({
       collection: 'tool-submissions',
       where: { status: { equals: 'pending' } },
       limit: 0,
       overrideAccess: true,
-    }) : { totalDocs: 0 }
+    })
 
     return {
       totalRevenue,
