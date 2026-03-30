@@ -127,6 +127,7 @@ export default async function HomePage() {
                   incomeLow={tool.incomeLow}
                   incomeHigh={tool.incomeHigh}
                   featured={tool.featured}
+                  affiliateLink={(tool as any).affiliateLink}
                 />
               ))}
             </div>

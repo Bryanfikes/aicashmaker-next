@@ -156,6 +156,7 @@ export default async function ToolsPage() {
                   incomeHigh={tool.incomeHigh}
                   badge={(tool as any).badge}
                   featured={tool.featured}
+                  affiliateLink={(tool as any).affiliateLink}
                 />
               ))}
             </div>

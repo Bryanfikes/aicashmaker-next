@@ -64,7 +64,7 @@ export default function DealsPage() {
                 <div className="text-4xl font-black text-slate-900">$99</div>
                 <div className="inline-block bg-emerald-100 text-emerald-700 text-xs font-bold px-3 py-1 rounded-full mt-1">Save 79%</div>
               </div>
-              <Link href="/tools/writesonic" className="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-5 rounded-xl text-sm text-center transition-colors no-underline block">
+              <Link href="/go/writesonic" className="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-5 rounded-xl text-sm text-center transition-colors no-underline block">
                 Get This Deal →
               </Link>
               <p className="text-xs text-slate-400">⚡ Limited availability</p>
@@ -102,7 +102,7 @@ export default function DealsPage() {
                 </div>
               </div>
               <div className="p-4 pt-0">
-                <Link href={`/tools/${slug}`} className="block w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-2.5 rounded-xl text-xs text-center transition-colors no-underline">
+                <Link href={`/go/${slug}`} className="block w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-2.5 rounded-xl text-xs text-center transition-colors no-underline">
                   Get Deal →
                 </Link>
               </div>

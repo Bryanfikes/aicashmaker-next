@@ -35,6 +35,7 @@ export default function ToolCard({
   incomeHigh,
   badge,
   featured,
+  affiliateLink,
 }: ToolCardProps) {
   const stars = rating ? Math.round(rating * 2) / 2 : 0
   const fullStars = Math.floor(stars)
@@ -122,13 +123,24 @@ export default function ToolCard({
               {incomeLabel}
             </span>
           )}
-          {price && (
+          {price && !affiliateLink && (
             <span className="text-[11px] font-semibold text-slate-700">
               {price}
             </span>
           )}
-          {pricingModel === 'free' && !price && (
+          {pricingModel === 'free' && !price && !affiliateLink && (
             <span className="text-[11px] font-semibold text-emerald-600">Free</span>
+          )}
+          {affiliateLink && (
+            <a
+              href={`/go/${slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="text-[11px] font-bold text-sky-600 bg-sky-50 hover:bg-sky-100 px-2.5 py-1 rounded-lg transition-colors"
+            >
+              Try it →
+            </a>
           )}
         </div>
       </div>

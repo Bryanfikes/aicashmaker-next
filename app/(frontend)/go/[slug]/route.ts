@@ -18,14 +18,14 @@ export async function GET(
     })
 
     if (result.totalDocs === 0) {
-      return NextResponse.redirect(new URL('/tools', request.url))
+      return NextResponse.redirect(new URL(`/tools/${slug}`, request.url))
     }
 
     const tool = result.docs[0] as { affiliateLink?: string; name?: string }
     const affiliateLink = tool.affiliateLink
 
     if (!affiliateLink) {
-      return NextResponse.redirect(new URL('/tools', request.url))
+      return NextResponse.redirect(new URL(`/tools/${slug}`, request.url))
     }
 
     // TODO Phase 5: log click to affiliate_clicks table for analytics

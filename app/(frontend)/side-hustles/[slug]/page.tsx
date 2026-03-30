@@ -208,11 +208,16 @@ export default async function SideHustlePage({ params }: Props) {
                   <h3 className="text-sm font-bold text-slate-900 mb-4">Tools You'll Need</h3>
                   <div className="space-y-2">
                     {hustle.recommendedTools.map((tool: any, i: number) => {
-                      const t = typeof tool === 'object' ? tool : { name: tool, slug: '' }
+                      const t = typeof tool === 'object' ? tool : { name: tool, slug: '', affiliateLink: '' }
+                      const href = t.slug
+                        ? t.affiliateLink ? `/go/${t.slug}` : `/tools/${t.slug}`
+                        : '/tools'
                       return (
                         <Link
                           key={i}
-                          href={t.slug ? `/tools/${t.slug}` : '/tools'}
+                          href={href}
+                          target={t.affiliateLink ? '_blank' : undefined}
+                          rel={t.affiliateLink ? 'noopener noreferrer' : undefined}
                           className="flex items-center gap-2 text-sm text-sky-600 hover:text-sky-700 no-underline"
                         >
                           <span className="text-sky-400">→</span>
