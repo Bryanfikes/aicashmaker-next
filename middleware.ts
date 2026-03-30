@@ -5,19 +5,25 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get('payload-token')
   const { pathname } = request.nextUrl
 
-  // Protect all authenticated portals
-  if (
+  // Protect all authenticated portals (but allow the login pages themselves)
+  const isProtected =
     (pathname.startsWith('/dashboard') ||
       pathname.startsWith('/account') ||
-      pathname.startsWith('/affiliate')) &&
+      pathname.startsWith('/affiliate/dashboard') ||
+      pathname.startsWith('/admin-dashboard')) &&
     !token
-  ) {
-    return NextResponse.redirect(new URL('/login', request.url))
+
+  if (isProtected) {
+    const loginUrl = pathname.startsWith('/affiliate')
+      ? '/affiliate/login'
+      : '/login'
+    return NextResponse.redirect(new URL(loginUrl, request.url))
   }
 
-  // Redirect authenticated users away from login
-  if (pathname === '/login' && token) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+  // Redirect authenticated users away from login pages
+  if ((pathname === '/login' || pathname === '/affiliate/login') && token) {
+    const dest = pathname.startsWith('/affiliate') ? '/affiliate/dashboard' : '/dashboard'
+    return NextResponse.redirect(new URL(dest, request.url))
   }
 
   // Set affiliate referral cookie on first visit with ?ref=CODE
