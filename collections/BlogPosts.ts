@@ -68,7 +68,14 @@ export const BlogPosts: CollectionConfig = {
     {
       name: 'body',
       type: 'richText',
-      required: true,
+    },
+    {
+      name: 'contentHtml',
+      type: 'textarea',
+      admin: {
+        description: 'Auto-generated HTML content — used instead of the rich text body when present. Do not edit manually.',
+        rows: 10,
+      },
     },
     {
       name: 'toolsMentioned',

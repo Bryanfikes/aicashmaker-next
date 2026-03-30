@@ -151,12 +151,12 @@ export default async function BlogPostPage({ params }: Props) {
 
             {/* Article body */}
             <article className="prose-content mb-10">
-              {post.body ? (
+              {(post as any).contentHtml ? (
+                <div dangerouslySetInnerHTML={{ __html: (post as any).contentHtml }} />
+              ) : post.body ? (
                 <div dangerouslySetInnerHTML={{ __html: convertLexicalToHTML({ data: post.body, disableContainer: true }) }} />
               ) : (
-                <div className="space-y-4 text-slate-600">
-                  <p>Full article content is coming soon. In the meantime, explore our pillar guides below.</p>
-                </div>
+                <p className="text-slate-500 italic">Content coming soon.</p>
               )}
             </article>
 
