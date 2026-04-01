@@ -39,7 +39,7 @@ export default function Nav() {
 
   return (
     <header
-      className={`sticky top-0 z-50 bg-white/97 backdrop-blur-lg border-b border-slate-200 transition-shadow ${
+      className={`sticky top-0 z-50 bg-white border-b border-slate-200 transition-shadow ${
         scrolled ? 'shadow-[0_2px_20px_rgba(0,0,0,0.08)]' : ''
       }`}
     >

@@ -122,6 +122,19 @@ export const SideHustles: CollectionConfig = {
       label: 'Full guide content',
     },
     {
+      name: 'gradient',
+      type: 'text',
+      admin: { description: 'CSS gradient e.g. linear-gradient(135deg,#0ea5e9,#0284c7)' },
+    },
+    {
+      name: 'contentHtml',
+      type: 'textarea',
+      admin: {
+        description: 'Full guide HTML content.',
+        rows: 15,
+      },
+    },
+    {
       name: 'metaDescription',
       type: 'textarea',
     },

@@ -1,13 +1,18 @@
-import { Metadata } from 'next'
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getPayload } from '@/lib/payload'
-import { convertLexicalToHTML } from '@payloadcms/richtext-lexical/html'
 
 export const dynamic = 'force-dynamic'
 
 interface Props {
   params: Promise<{ slug: string }>
+}
+
+const DIFFICULTY_MAP: Record<string, { label: string; color: string; border: string; desc: string }> = {
+  beginner:     { label: 'Beginner',     color: 'bg-emerald-100 text-emerald-700', border: 'border-emerald-200', desc: 'No prior experience needed' },
+  intermediate: { label: 'Intermediate', color: 'bg-amber-100   text-amber-700',   border: 'border-amber-200',   desc: 'Some skills helpful' },
+  advanced:     { label: 'Advanced',     color: 'bg-red-100     text-red-700',     border: 'border-red-200',     desc: 'Strong skill set required' },
 }
 
 async function getHustle(slug: string) {
@@ -24,224 +29,312 @@ async function getHustle(slug: string) {
   }
 }
 
+async function getRelated(difficulty: string, currentSlug: string) {
+  try {
+    const payload = await getPayload()
+    const result = await payload.find({
+      collection: 'side-hustles',
+      where: {
+        and: [
+          { published: { equals: true } },
+          { slug: { not_equals: currentSlug } },
+        ],
+      },
+      limit: 3,
+      sort: '-incomeHigh',
+    })
+    return result.docs
+  } catch {
+    return []
+  }
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   const hustle = await getHustle(slug)
   if (!hustle) return { title: 'Guide Not Found' }
+
+  const income = hustle.incomeLow && hustle.incomeHigh
+    ? `$${Number(hustle.incomeLow).toLocaleString()}–$${Number(hustle.incomeHigh).toLocaleString()}/month`
+    : 'money'
+  const title = `${hustle.name as string} — How to Make ${income} with AI`
+  const description = hustle.metaDescription as string
+    || `${hustle.tagline as string} Learn the exact steps to start ${hustle.name as string} with AI tools. Startup cost: ${(hustle.startupCost as string) || '$0–$50'}. Time to first dollar: ${(hustle.timeToFirstDollar as string) || '1–4 weeks'}.`
+
   return {
-    title: `${hustle.name} — How to Make ${hustle.incomeLow ? `$${hustle.incomeLow.toLocaleString()}` : 'Money'}+/Month`,
-    description: hustle.tagline,
+    title,
+    description,
+    keywords: [
+      hustle.name as string,
+      `${hustle.name as string} with AI`,
+      'AI side hustle',
+      'make money with AI',
+      `how to start ${hustle.name as string}`,
+      'AI income ideas',
+    ].join(', '),
+    openGraph: { title, description, type: 'article', siteName: 'AICashMaker' },
+    twitter: { card: 'summary_large_image', title, description },
+    alternates: { canonical: `/side-hustles/${slug}` },
   }
 }
 
 export async function generateStaticParams() { return [] }
-
-const DIFFICULTY_LABELS: Record<string, { label: string; color: string }> = {
-  beginner: { label: 'Beginner Friendly', color: 'bg-emerald-100 text-emerald-700' },
-  intermediate: { label: 'Intermediate', color: 'bg-amber-100 text-amber-700' },
-  advanced: { label: 'Advanced', color: 'bg-red-100 text-red-700' },
-}
 
 export default async function SideHustlePage({ params }: Props) {
   const { slug } = await params
   const hustle = await getHustle(slug)
   if (!hustle) notFound()
 
+  const gradient = (hustle.gradient as string | null) || 'linear-gradient(135deg,#0ea5e9,#0284c7)'
+  const difficulty = DIFFICULTY_MAP[hustle.difficulty as string] || DIFFICULTY_MAP.beginner
   const incomeRange = hustle.incomeLow && hustle.incomeHigh
-    ? `$${hustle.incomeLow.toLocaleString()}–$${hustle.incomeHigh.toLocaleString()}/mo`
-    : null
+    ? `$${Number(hustle.incomeLow).toLocaleString()}–$${Number(hustle.incomeHigh).toLocaleString()}/mo`
+    : 'Varies'
+  const related = await getRelated(hustle.difficulty as string, slug)
 
-  const difficulty = DIFFICULTY_LABELS[hustle.difficulty] || DIFFICULTY_LABELS.beginner
-  const gradient = hustle.gradient || 'linear-gradient(135deg, #0ea5e9, #0284c7)'
-
-  const heroStats = [
-    { label: 'Income Range', value: incomeRange || 'Varies', icon: '💰' },
-    { label: 'First Dollar', value: hustle.timeToFirstDollar || '1–4 weeks', icon: '⏱️' },
-    { label: 'Startup Cost', value: hustle.startupCost || '$0–$50', icon: '💳' },
-    { label: 'Difficulty', value: difficulty.label, icon: '📊' },
-  ]
+  // JSON-LD HowTo schema
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    name: `How to Start ${hustle.name as string}`,
+    description: hustle.tagline as string,
+    estimatedCost: {
+      '@type': 'MonetaryAmount',
+      currency: 'USD',
+      value: (hustle.startupCost as string)?.replace(/[^0-9]/g, '') || '0',
+    },
+    supply: [{ '@type': 'HowToSupply', name: 'AI tools (see guide)' }],
+    totalTime: `P${(hustle.timeToFirstDollar as string)?.includes('week') ? (hustle.timeToFirstDollar as string).match(/\d+/)?.[0] ?? '2' : '4'}W`,
+  }
 
   return (
     <>
+      {/* JSON-LD */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+
+      {/* Gradient top bar */}
+      <div className="h-1.5 w-full" style={{ background: gradient }} />
+
       {/* Breadcrumb */}
       <div className="bg-slate-50 border-b border-slate-100 px-4 py-3">
-        <div className="max-w-7xl mx-auto">
-          <nav className="text-xs text-slate-400">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <nav className="text-xs text-slate-400 flex items-center gap-1 flex-wrap">
             <Link href="/" className="hover:text-slate-600 no-underline">Home</Link>
-            <span className="mx-1.5">›</span>
+            <span>›</span>
             <Link href="/side-hustles" className="hover:text-slate-600 no-underline">Side Hustles</Link>
-            <span className="mx-1.5">›</span>
-            <span className="text-slate-600">{hustle.name}</span>
+            <span>›</span>
+            <span className="text-slate-600 truncate max-w-[200px]">{hustle.name as string}</span>
           </nav>
+          <span className="text-xs text-slate-400 hidden sm:block">{incomeRange}/month potential</span>
         </div>
       </div>
 
       {/* Hero */}
-      <section className="pt-10 pb-12 px-4" style={{ background: gradient }}>
-        <div className="max-w-4xl mx-auto text-center text-white">
-          <div className="text-4xl mb-4">{hustle.icon}</div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold mb-3 leading-tight">{hustle.name}</h1>
-          <p className="text-white/80 text-base max-w-xl mx-auto">{hustle.tagline}</p>
+      <section className="py-14 px-4 text-center text-white relative overflow-hidden" style={{ background: gradient }}>
+        <div className="absolute inset-0 bg-black/10 pointer-events-none" />
+        <div className="relative max-w-3xl mx-auto">
+          <div className="text-5xl mb-4">{hustle.icon as string || '💰'}</div>
+          <div className="flex items-center justify-center gap-2 mb-4 flex-wrap">
+            <span className={`text-xs font-bold px-2.5 py-1 rounded-full border bg-white/15 border-white/30 text-white`}>
+              {difficulty.label}
+            </span>
+            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-white/15 border border-white/30 text-white">
+              {incomeRange}/month
+            </span>
+            {hustle.timeToFirstDollar && (
+              <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-white/15 border border-white/30 text-white">
+                First $ in {hustle.timeToFirstDollar as string}
+              </span>
+            )}
+          </div>
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold mb-4 leading-tight drop-shadow-sm">
+            {hustle.name as string}
+          </h1>
+          <p className="text-white/85 text-lg max-w-xl mx-auto leading-relaxed">
+            {hustle.tagline as string}
+          </p>
         </div>
       </section>
 
       {/* Stats bar */}
-      <div className="bg-white border-b border-slate-200 px-4 py-0">
-        <div className="max-w-4xl mx-auto grid grid-cols-2 sm:grid-cols-4">
-          {heroStats.map(({ label, value, icon }) => (
-            <div key={label} className="flex flex-col items-center justify-center py-5 px-3 border-r border-slate-100 last:border-r-0">
-              <div className="text-lg mb-1">{icon}</div>
-              <div className="text-xs text-slate-500 mb-1">{label}</div>
-              <div className="text-sm font-bold text-slate-900 text-center">{value}</div>
+      <div className="bg-white border-b border-slate-200 shadow-sm">
+        <div className="max-w-7xl mx-auto grid grid-cols-2 sm:grid-cols-4 divide-x divide-slate-100">
+          {[
+            { icon: '💰', label: 'Income Range', value: incomeRange },
+            { icon: '⚡', label: 'Time to First $', value: (hustle.timeToFirstDollar as string) || '1–4 weeks' },
+            { icon: '💳', label: 'Startup Cost', value: (hustle.startupCost as string) || '$0' },
+            { icon: '⏰', label: 'Time/Week', value: (hustle.timeCommitment as string) || '5–20 hrs' },
+          ].map(({ icon, label, value }) => (
+            <div key={label} className="flex flex-col items-center justify-center py-5 px-3 text-center">
+              <span className="text-xl mb-1">{icon}</span>
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">{label}</span>
+              <span className="text-sm font-extrabold text-slate-900">{value}</span>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-10">
-        <div className="lg:grid lg:grid-cols-[1fr_280px] gap-10">
-          {/* Main content */}
-          <div>
-            {/* Steps */}
-            {hustle.steps?.length > 0 && (
-              <div className="mb-10">
-                <h2 className="text-xl font-extrabold text-slate-900 mb-6">Step-by-Step Blueprint</h2>
-                <div className="space-y-5">
-                  {hustle.steps.map((step: any, i: number) => (
-                    <div key={i} className="flex gap-4">
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 text-white" style={{ background: gradient }}>
-                        {i + 1}
-                      </div>
-                      <div className="flex-1 pb-5 border-b border-slate-100 last:border-b-0">
-                        <h3 className="text-sm font-bold text-slate-900 mb-1.5">{step.title}</h3>
-                        {step.description && (
-                          <p className="text-sm text-slate-600 leading-relaxed">{step.description}</p>
-                        )}
-                        {step.tip && (
-                          <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl p-3">
-                            <span className="text-xs font-semibold text-amber-700">💡 Pro tip: </span>
-                            <span className="text-xs text-amber-800">{step.tip}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+      {/* Main layout */}
+      <div className="max-w-7xl mx-auto px-4 py-10">
+        <div className="lg:grid lg:grid-cols-[1fr_320px] gap-12 items-start">
+
+          {/* ── Left: Guide Content ── */}
+          <div className="min-w-0">
+
+            {/* Opportunity callout */}
+            <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl p-6 mb-8 flex items-start gap-4">
+              <div className="text-3xl flex-shrink-0">{hustle.icon as string || '💰'}</div>
+              <div>
+                <p className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-1">Income Opportunity</p>
+                <p className="text-white font-bold text-base mb-1">{hustle.name as string}: {incomeRange}/month</p>
+                <p className="text-slate-400 text-sm leading-relaxed">
+                  {difficulty.label} · Startup cost {(hustle.startupCost as string) || '$0'} · First dollar in {(hustle.timeToFirstDollar as string) || '1–4 weeks'}
+                </p>
               </div>
+            </div>
+
+            {/* HTML content */}
+            {(hustle.contentHtml as string | null) ? (
+              <div
+                className="prose prose-slate max-w-none
+                  prose-headings:font-extrabold prose-headings:text-slate-900
+                  prose-h2:text-2xl prose-h2:mt-10 prose-h2:mb-4 prose-h2:pb-2 prose-h2:border-b prose-h2:border-slate-100
+                  prose-h3:text-lg prose-h3:mt-6 prose-h3:mb-2
+                  prose-p:text-slate-600 prose-p:leading-relaxed
+                  prose-li:text-slate-600
+                  prose-a:text-sky-600 prose-a:no-underline hover:prose-a:underline
+                  prose-strong:text-slate-800
+                  prose-blockquote:border-l-4 prose-blockquote:border-emerald-400 prose-blockquote:bg-emerald-50 prose-blockquote:rounded-r-xl prose-blockquote:py-1 prose-blockquote:not-italic
+                  prose-table:text-sm
+                  prose-th:bg-slate-50 prose-th:font-bold
+                  prose-td:align-top"
+                dangerouslySetInnerHTML={{ __html: hustle.contentHtml as string }}
+              />
+            ) : (
+              <p className="text-slate-400 italic">Full guide coming soon.</p>
             )}
 
-            {/* Body content */}
-            {hustle.body && (
-              <div className="prose-content mb-10">
-                <div dangerouslySetInnerHTML={{ __html: convertLexicalToHTML({ data: hustle.body, disableContainer: true }) }} />
-              </div>
-            )}
-
-            {/* Income table */}
-            {hustle.incomeTable?.length > 0 && (
-              <div className="mb-10">
-                <h2 className="text-xl font-extrabold text-slate-900 mb-5">Income Breakdown by Experience Level</h2>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm border-collapse">
-                    <thead>
-                      <tr className="bg-slate-50">
-                        <th className="text-left px-4 py-3 text-xs font-bold text-slate-600 border border-slate-200">Level</th>
-                        <th className="text-left px-4 py-3 text-xs font-bold text-slate-600 border border-slate-200">Monthly Income</th>
-                        <th className="text-left px-4 py-3 text-xs font-bold text-slate-600 border border-slate-200">Time Required</th>
-                        <th className="text-left px-4 py-3 text-xs font-bold text-slate-600 border border-slate-200">Notes</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {hustle.incomeTable.map((row: any, i: number) => (
-                        <tr key={i} className="even:bg-slate-50">
-                          <td className="px-4 py-3 border border-slate-200 font-semibold text-slate-900">{row.level}</td>
-                          <td className="px-4 py-3 border border-slate-200 font-bold text-emerald-600">{row.income}</td>
-                          <td className="px-4 py-3 border border-slate-200 text-slate-600">{row.timeRequired}</td>
-                          <td className="px-4 py-3 border border-slate-200 text-slate-500 text-xs">{row.notes}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+            {/* Related hustles */}
+            {related.length > 0 && (
+              <section className="mt-14 pt-10 border-t border-slate-100">
+                <h2 className="text-xl font-extrabold text-slate-900 mb-5">More Ways to Make Money with AI</h2>
+                <div className="grid sm:grid-cols-3 gap-4">
+                  {related.map((r: any) => {
+                    const rGradient = r.gradient || 'linear-gradient(135deg,#0ea5e9,#0284c7)'
+                    const rIncome = r.incomeLow && r.incomeHigh
+                      ? `$${Number(r.incomeLow).toLocaleString()}–$${Number(r.incomeHigh).toLocaleString()}/mo`
+                      : null
+                    return (
+                      <Link
+                        key={r.slug}
+                        href={`/side-hustles/${r.slug}`}
+                        className="block bg-white border border-slate-200 rounded-xl overflow-hidden hover:border-slate-300 hover:shadow-md transition-all no-underline group"
+                      >
+                        <div className="h-16 flex items-center justify-center text-2xl" style={{ background: rGradient }}>
+                          {r.icon || '💰'}
+                        </div>
+                        <div className="p-4">
+                          <p className="text-sm font-bold text-slate-900 mb-1 group-hover:text-sky-600 transition-colors">{r.name}</p>
+                          <p className="text-xs text-slate-400 line-clamp-2 mb-2">{r.tagline}</p>
+                          {rIncome && <span className="text-xs font-extrabold text-emerald-600">{rIncome}</span>}
+                        </div>
+                      </Link>
+                    )
+                  })}
                 </div>
-              </div>
-            )}
-
-            {/* Pro tips */}
-            {hustle.proTips?.length > 0 && (
-              <div className="mb-10">
-                <h2 className="text-xl font-extrabold text-slate-900 mb-5">Pro Tips</h2>
-                <div className="space-y-3">
-                  {hustle.proTips.map((tip: any, i: number) => (
-                    <div key={i} className="flex items-start gap-3 bg-emerald-50 border border-emerald-100 rounded-xl p-4">
-                      <span className="text-emerald-500 text-lg mt-0.5">✓</span>
-                      <p className="text-sm text-slate-700 leading-relaxed">{tip.tip}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              </section>
             )}
           </div>
 
-          {/* Sidebar */}
-          <aside>
-            <div className="sticky top-20 space-y-4">
-              {/* Quick stats */}
+          {/* ── Right: Sticky Sidebar ── */}
+          <aside className="mt-10 lg:mt-0">
+            <div className="sticky top-24 space-y-4">
+
+              {/* Quick facts card */}
+              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                <div className="h-1.5 w-full" style={{ background: gradient }} />
+                <div className="p-5">
+                  <p className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-4">Quick Facts</p>
+                  <div className="space-y-3">
+                    {([
+                      ['💰', 'Income Range', incomeRange],
+                      ['⚡', 'First Dollar', (hustle.timeToFirstDollar as string) || '1–4 weeks'],
+                      ['💳', 'Startup Cost', (hustle.startupCost as string) || '$0'],
+                      ['⏰', 'Time/Week', (hustle.timeCommitment as string) || '5–20 hrs'],
+                      ['📊', 'Difficulty', difficulty.label],
+                    ] as [string, string, string][]).map(([icon, label, value]) => (
+                      <div key={label} className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-2 text-slate-500">
+                          <span>{icon}</span>
+                          <span className="text-xs">{label}</span>
+                        </span>
+                        <span className="text-xs font-bold text-slate-900">{value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="border-t border-slate-100 px-5 py-4">
+                  <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full border ${difficulty.color} ${difficulty.border}`}>
+                    {difficulty.label} · {difficulty.desc}
+                  </span>
+                </div>
+              </div>
+
+              {/* Newsletter CTA */}
+              <div className="rounded-2xl overflow-hidden">
+                <div className="h-1.5 w-full" style={{ background: gradient }} />
+                <div className="bg-slate-900 px-5 py-5">
+                  <p className="text-xs font-bold uppercase tracking-wider text-emerald-400 mb-1">Free Weekly Strategies</p>
+                  <p className="text-sm font-bold text-white mb-1">Get the AI Income Newsletter</p>
+                  <p className="text-xs text-slate-400 mb-4 leading-relaxed">
+                    New money-making strategies, tool reviews, and income reports every week.
+                  </p>
+                  <Link
+                    href="/newsletter"
+                    className="block text-center font-bold py-3 rounded-xl text-sm transition-colors no-underline text-white"
+                    style={{ background: gradient }}
+                  >
+                    Subscribe Free →
+                  </Link>
+                </div>
+              </div>
+
+              {/* Marketplace cross-sell */}
               <div className="bg-white border border-slate-200 rounded-2xl p-5">
-                <h3 className="text-sm font-bold text-slate-900 mb-4">Quick Facts</h3>
-                <div className="space-y-3">
+                <p className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3">Speed Up Your Start</p>
+                <div className="space-y-2">
                   {[
-                    ['Income Range', incomeRange || 'Varies'],
-                    ['Time to First $', hustle.timeToFirstDollar || '1–4 weeks'],
-                    ['Startup Cost', hustle.startupCost || '$0'],
-                    ['Difficulty', difficulty.label],
-                  ].map(([label, value]) => (
-                    <div key={label} className="flex items-start justify-between gap-2">
-                      <span className="text-xs text-slate-500">{label}</span>
-                      <span className="text-xs font-semibold text-slate-900 text-right">{value}</span>
-                    </div>
+                    { href: '/automations', icon: '⚡', label: 'Automation Templates', desc: 'Save hours every week' },
+                    { href: '/prompts', icon: '✨', label: 'AI Prompt Packs', desc: 'Ready-to-use AI workflows' },
+                    { href: '/tools', icon: '🛠️', label: 'AI Tools Directory', desc: 'Find the right tools' },
+                  ].map(({ href, icon, label, desc }) => (
+                    <Link
+                      key={href}
+                      href={href}
+                      className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 transition-colors no-underline group"
+                    >
+                      <span className="text-lg w-8 text-center flex-shrink-0">{icon}</span>
+                      <div>
+                        <p className="text-xs font-semibold text-slate-900 group-hover:text-sky-600 transition-colors">{label}</p>
+                        <p className="text-[11px] text-slate-400">{desc}</p>
+                      </div>
+                    </Link>
                   ))}
                 </div>
               </div>
 
-              {/* Tools needed */}
-              {hustle.recommendedTools?.length > 0 && (
-                <div className="bg-white border border-slate-200 rounded-2xl p-5">
-                  <h3 className="text-sm font-bold text-slate-900 mb-4">Tools You'll Need</h3>
-                  <div className="space-y-2">
-                    {hustle.recommendedTools.map((tool: any, i: number) => {
-                      const t = typeof tool === 'object' ? tool : { name: tool, slug: '', affiliateLink: '' }
-                      const href = t.slug
-                        ? t.affiliateLink ? `/go/${t.slug}` : `/tools/${t.slug}`
-                        : '/tools'
-                      return (
-                        <Link
-                          key={i}
-                          href={href}
-                          target={t.affiliateLink ? '_blank' : undefined}
-                          rel={t.affiliateLink ? 'noopener noreferrer' : undefined}
-                          className="flex items-center gap-2 text-sm text-sky-600 hover:text-sky-700 no-underline"
-                        >
-                          <span className="text-sky-400">→</span>
-                          {t.name}
-                        </Link>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* CTA */}
-              <div className="rounded-2xl p-5 text-white text-center" style={{ background: gradient }}>
-                <div className="text-2xl mb-2">{hustle.icon}</div>
-                <h3 className="text-sm font-bold mb-2">Ready to Start?</h3>
-                <p className="text-xs text-white/80 mb-4">Get the tools and start earning this week.</p>
+              {/* All hustles nav */}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">All Side Hustles</p>
                 <Link
-                  href="/newsletter"
-                  className="block text-xs font-bold py-2.5 rounded-xl bg-white/20 hover:bg-white/30 transition-colors no-underline text-white"
+                  href="/side-hustles"
+                  className="flex items-center justify-between text-sm font-semibold text-slate-700 hover:text-sky-600 no-underline transition-colors"
                 >
-                  Get Weekly Strategies →
+                  <span>Browse all 10 guides</span>
+                  <span>→</span>
                 </Link>
               </div>
+
             </div>
           </aside>
         </div>

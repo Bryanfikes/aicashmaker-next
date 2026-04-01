@@ -73,10 +73,10 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     }
   }
 
-  // Resolve affiliate by referral code (only for product purchases)
+  // Resolve affiliate by referral code (all purchasable order types)
   let affiliateId: string | undefined
   let affiliateCommission = 0
-  const affiliateCode = isProduct ? (metadata.affiliateCode || '') : ''
+  const affiliateCode = metadata.affiliateCode || ''
   if (affiliateCode) {
     const affiliateResult = await payload.find({
       collection: 'affiliates',
@@ -138,7 +138,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         stripePaymentIntentId: typeof session.payment_intent === 'string'
           ? session.payment_intent
           : undefined,
-        advertisingDetails: !isProduct
+        advertisingDetails: (orderType === 'featured-listing' || orderType === 'newsletter-sponsorship' || orderType === 'full-review' || orderType === 'bundle')
           ? {
               companyName: metadata.companyName ?? '',
               websiteUrl: metadata.websiteUrl ?? '',
@@ -226,6 +226,8 @@ async function handleCheckoutExpired(session: Stripe.Checkout.Session) {
 function mapOrderType(raw: string): string {
   const map: Record<string, string> = {
     product: 'product',
+    automation: 'automation',
+    prompt: 'prompt',
     'featured-listing': 'featured-listing',
     'newsletter-sponsorship': 'newsletter-sponsorship',
     'full-review': 'full-review',

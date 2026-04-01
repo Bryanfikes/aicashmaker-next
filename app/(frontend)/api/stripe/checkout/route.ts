@@ -149,6 +149,92 @@ export async function POST(request: Request) {
       return NextResponse.json({ url: session.url })
     }
 
+    // --- AUTOMATION PURCHASE ---
+    if (type === 'automation') {
+      const automationSlug = typeof body.automationSlug === 'string' ? body.automationSlug : ''
+      if (!automationSlug) return NextResponse.json({ error: 'automationSlug required' }, { status: 400 })
+
+      const payload = await getPayload()
+      const result = await payload.find({
+        collection: 'automations',
+        where: { and: [{ slug: { equals: automationSlug } }, { published: { equals: true } }] },
+        limit: 1,
+        overrideAccess: true,
+      })
+      const auto = result.docs[0] as unknown as { title: string; price: number; slug: string; platform: string } | undefined
+      if (!auto) return NextResponse.json({ error: 'Automation not found' }, { status: 404 })
+
+      const priceInCents = Math.round((auto.price as number) * 100)
+      const session = await stripe.checkout.sessions.create({
+        mode: 'payment',
+        line_items: [
+          {
+            price_data: {
+              currency: 'usd',
+              unit_amount: priceInCents,
+              product_data: {
+                name: auto.title,
+                description: `${auto.platform} automation template — instant download`,
+              },
+            },
+            quantity: 1,
+          },
+        ],
+        metadata: {
+          orderType: 'automation',
+          automationSlug: auto.slug,
+          ...(affiliateRef ? { affiliateCode: affiliateRef } : {}),
+          ...(buyerId ? { buyerId } : {}),
+        },
+        success_url: `${SITE_URL}/automations/${auto.slug}?purchased=true`,
+        cancel_url: `${SITE_URL}/automations/${auto.slug}`,
+      })
+      return NextResponse.json({ url: session.url })
+    }
+
+    // --- PROMPT PURCHASE ---
+    if (type === 'prompt') {
+      const promptSlug = typeof body.promptSlug === 'string' ? body.promptSlug : ''
+      if (!promptSlug) return NextResponse.json({ error: 'promptSlug required' }, { status: 400 })
+
+      const payload = await getPayload()
+      const result = await payload.find({
+        collection: 'prompts',
+        where: { and: [{ slug: { equals: promptSlug } }, { published: { equals: true } }] },
+        limit: 1,
+        overrideAccess: true,
+      })
+      const prompt = result.docs[0] as unknown as { title: string; price: number; slug: string; model: string } | undefined
+      if (!prompt) return NextResponse.json({ error: 'Prompt not found' }, { status: 404 })
+
+      const priceInCents = Math.round((prompt.price as number) * 100)
+      const session = await stripe.checkout.sessions.create({
+        mode: 'payment',
+        line_items: [
+          {
+            price_data: {
+              currency: 'usd',
+              unit_amount: priceInCents,
+              product_data: {
+                name: prompt.title,
+                description: `${prompt.model} prompt pack — instant download`,
+              },
+            },
+            quantity: 1,
+          },
+        ],
+        metadata: {
+          orderType: 'prompt',
+          promptSlug: prompt.slug,
+          ...(affiliateRef ? { affiliateCode: affiliateRef } : {}),
+          ...(buyerId ? { buyerId } : {}),
+        },
+        success_url: `${SITE_URL}/prompts/${prompt.slug}?purchased=true`,
+        cancel_url: `${SITE_URL}/prompts/${prompt.slug}`,
+      })
+      return NextResponse.json({ url: session.url })
+    }
+
     return NextResponse.json({ error: 'Invalid checkout type' }, { status: 400 })
   } catch (err) {
     console.error('[StripeCheckout] Error:', err)

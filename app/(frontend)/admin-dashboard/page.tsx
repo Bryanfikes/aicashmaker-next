@@ -26,7 +26,10 @@ async function getAdminUser() {
 async function getStats() {
   try {
     const payload = await getPayload()
-    const [orders, affiliates, subscribers, toolSubs, productSubs, tools, blogPosts, prompts, automations, sideHustles] = await Promise.all([
+    const [
+      orders, affiliates, subscribers, toolSubs, productSubs,
+      tools, blogPosts, prompts, automations, sideHustles, users,
+    ] = await Promise.all([
       payload.find({ collection: 'orders', limit: 0, overrideAccess: true }),
       payload.find({ collection: 'affiliates', limit: 0, overrideAccess: true }),
       payload.find({ collection: 'newsletter-subscribers', limit: 0, overrideAccess: true }),
@@ -37,42 +40,39 @@ async function getStats() {
       payload.find({ collection: 'prompts', where: { published: { equals: true } }, limit: 0, overrideAccess: true }),
       payload.find({ collection: 'automations', where: { published: { equals: true } }, limit: 0, overrideAccess: true }),
       payload.find({ collection: 'side-hustles', limit: 0, overrideAccess: true }),
+      payload.find({ collection: 'users', limit: 0, overrideAccess: true }),
     ])
 
-    const recentOrders = await payload.find({
-      collection: 'orders',
-      limit: 10,
-      sort: '-createdAt',
-      overrideAccess: true,
-    })
+    const [recentOrders, topAffiliates, paidOrders, pendingSubs] = await Promise.all([
+      payload.find({ collection: 'orders', limit: 12, sort: '-createdAt', overrideAccess: true }),
+      payload.find({ collection: 'affiliates', limit: 8, sort: '-totalEarned', overrideAccess: true }),
+      payload.find({ collection: 'orders', where: { status: { equals: 'paid' } }, limit: 1000, overrideAccess: true }),
+      payload.find({ collection: 'tool-submissions', where: { status: { equals: 'pending' } }, limit: 0, overrideAccess: true }),
+    ])
 
-    const topAffiliates = await payload.find({
-      collection: 'affiliates',
-      limit: 5,
-      sort: '-totalEarned',
-      overrideAccess: true,
-    })
-
-    // Calculate revenue from paid orders
-    const paidOrders = await payload.find({
-      collection: 'orders',
-      where: { status: { equals: 'paid' } },
-      limit: 1000,
-      overrideAccess: true,
-    })
     const totalRevenue = paidOrders.docs.reduce((sum: number, o: any) => sum + (o.amount || 0), 0)
     const totalPlatformFee = paidOrders.docs.reduce((sum: number, o: any) => sum + (o.platformFee || 0), 0)
+    const totalAffiliatePaid = topAffiliates.docs.reduce((sum: number, a: any) => sum + (a.totalPaid || 0), 0)
 
-    const pendingSubs = await payload.find({
-      collection: 'tool-submissions',
-      where: { status: { equals: 'pending' } },
-      limit: 0,
-      overrideAccess: true,
-    })
+    // Build simple monthly revenue buckets (last 6 months) from paidOrders
+    const now = new Date()
+    const months: { label: string; revenue: number }[] = []
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      const label = d.toLocaleString('en-US', { month: 'short' })
+      const revenue = paidOrders.docs.filter((o: any) => {
+        const od = new Date(o.createdAt)
+        return od.getFullYear() === d.getFullYear() && od.getMonth() === d.getMonth()
+      }).reduce((sum: number, o: any) => sum + (o.amount || 0), 0)
+      months.push({ label, revenue })
+    }
+
+    const maxMonthRevenue = Math.max(...months.map(m => m.revenue), 1)
 
     return {
       totalRevenue,
       totalPlatformFee,
+      totalAffiliatePaid,
       ordersCount: orders.totalDocs,
       paidOrdersCount: paidOrders.totalDocs,
       affiliatesCount: affiliates.totalDocs,
@@ -84,9 +84,12 @@ async function getStats() {
       promptsCount: prompts.totalDocs,
       automationsCount: automations.totalDocs,
       sideHustlesCount: sideHustles.totalDocs,
-      pendingSubsCount: (pendingSubs as any).totalDocs || 0,
+      usersCount: users.totalDocs,
+      pendingSubsCount: pendingSubs.totalDocs,
       recentOrders: recentOrders.docs,
       topAffiliates: topAffiliates.docs,
+      monthlyRevenue: months,
+      maxMonthRevenue,
     }
   } catch (e) {
     console.error('Admin stats error:', e)
@@ -98,195 +101,429 @@ function fmt(cents: number) {
   return '$' + (cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
+function fmtShort(cents: number) {
+  const dollars = cents / 100
+  if (dollars >= 1000) return '$' + (dollars / 1000).toFixed(1) + 'k'
+  return '$' + dollars.toFixed(0)
+}
+
 export default async function AdminDashboardPage() {
   const user = await getAdminUser()
-  if (!user || user.role !== 'super-admin') {
-    redirect('/admin')
-  }
+  if (!user || user.role !== 'super-admin') redirect('/admin')
 
   const stats = await getStats()
+  const pendingCount = (stats?.pendingSubsCount || 0) + (stats?.productSubsCount || 0)
 
-  const statCards = [
-    { label: 'Total Revenue', value: fmt(stats?.totalRevenue || 0), sub: `${stats?.paidOrdersCount || 0} paid orders`, color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
-    { label: 'Platform Revenue', value: fmt(stats?.totalPlatformFee || 0), sub: '20% platform fee', color: 'text-sky-400', bg: 'bg-sky-500/10 border-sky-500/20' },
-    { label: 'Active Affiliates', value: String(stats?.affiliatesCount || 0), sub: 'Registered partners', color: 'text-violet-400', bg: 'bg-violet-500/10 border-violet-500/20' },
-    { label: 'Email Subscribers', value: (stats?.subscribersCount || 0).toLocaleString(), sub: 'Newsletter list', color: 'text-pink-400', bg: 'bg-pink-500/10 border-pink-500/20' },
-  ]
-
-  const contentStats = [
-    { label: 'AI Tools', value: stats?.toolsCount || 0, href: '/admin/collections/tools', icon: '🛠️' },
-    { label: 'Blog Posts', value: stats?.blogPostsCount || 0, href: '/admin/collections/blog-posts', icon: '📝' },
-    { label: 'Prompt Packs', value: stats?.promptsCount || 0, href: '/admin/collections/prompts', icon: '✨' },
-    { label: 'Automations', value: stats?.automationsCount || 0, href: '/admin/collections/automations', icon: '⚡' },
-    { label: 'Side Hustles', value: stats?.sideHustlesCount || 0, href: '/admin/collections/side-hustles', icon: '💰' },
-    { label: 'Pending Reviews', value: (stats?.toolSubsCount || 0) + (stats?.productSubsCount || 0), href: '/admin/collections/tool-submissions', icon: '🔔', highlight: true },
+  const navSections = [
+    {
+      label: 'Overview',
+      items: [
+        { icon: '◈', label: 'Dashboard', href: '/admin-dashboard', active: true },
+        { icon: '⬡', label: 'Live Site', href: '/' },
+        { icon: '⚙', label: 'Payload Admin', href: '/admin' },
+      ],
+    },
+    {
+      label: 'Commerce',
+      items: [
+        { icon: '◎', label: 'Orders', href: '/admin/collections/orders', badge: stats?.ordersCount },
+        { icon: '◇', label: 'Products', href: '/admin/collections/products' },
+        { icon: '◉', label: 'Creators', href: '/admin/collections/creators' },
+      ],
+    },
+    {
+      label: 'Growth',
+      items: [
+        { icon: '◈', label: 'Affiliates', href: '/admin/collections/affiliates', badge: stats?.affiliatesCount },
+        { icon: '◎', label: 'Newsletter', href: '/admin/collections/newsletter-subscribers', badge: stats?.subscribersCount },
+      ],
+    },
+    {
+      label: 'Content',
+      items: [
+        { icon: '◇', label: 'AI Tools', href: '/admin/collections/tools', badge: stats?.toolsCount },
+        { icon: '◈', label: 'Blog Posts', href: '/admin/collections/blog-posts', badge: stats?.blogPostsCount },
+        { icon: '◉', label: 'Prompt Packs', href: '/admin/collections/prompts', badge: stats?.promptsCount },
+        { icon: '◎', label: 'Automations', href: '/admin/collections/automations', badge: stats?.automationsCount },
+        { icon: '◇', label: 'Side Hustles', href: '/admin/collections/side-hustles', badge: stats?.sideHustlesCount },
+      ],
+    },
+    {
+      label: 'Submissions',
+      items: [
+        { icon: '◉', label: 'Tool Submissions', href: '/admin/collections/tool-submissions', badge: stats?.toolSubsCount, alert: (stats?.toolSubsCount || 0) > 0 },
+        { icon: '◎', label: 'Product Submissions', href: '/admin/collections/product-submissions', badge: stats?.productSubsCount, alert: (stats?.productSubsCount || 0) > 0 },
+      ],
+    },
   ]
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
-      {/* Top nav */}
-      <header className="border-b border-white/8 bg-slate-900/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-[1400px] mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-sky-500 flex items-center justify-center text-white font-black text-sm">A</div>
-            <span className="font-bold text-white">AICashMaker Admin</span>
-            <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-medium">Dashboard</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-slate-400">Welcome, {user.name || user.email}</span>
-            <Link href="/admin" className="text-xs bg-white/8 hover:bg-white/12 text-slate-300 px-3 py-1.5 rounded-lg transition-colors no-underline">
-              Payload Admin →
-            </Link>
+    <div className="min-h-screen bg-slate-950 text-white flex">
+
+      {/* ── Sidebar ─────────────────────────────────────── */}
+      <aside className="w-56 flex-shrink-0 hidden lg:flex flex-col border-r border-white/6 bg-slate-900/60 sticky top-0 h-screen overflow-y-auto">
+        {/* Logo */}
+        <div className="px-4 py-5 border-b border-white/6">
+          <Link href="/" className="flex items-center gap-2.5 no-underline">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-sky-500 flex items-center justify-center text-white font-black text-sm flex-shrink-0">A</div>
+            <div>
+              <p className="text-sm font-extrabold text-white leading-none">AICashMaker</p>
+              <p className="text-[10px] text-slate-500 mt-0.5">Admin Console</p>
+            </div>
+          </Link>
+        </div>
+
+        {/* Nav */}
+        <nav className="flex-1 px-3 py-4 space-y-5">
+          {navSections.map(section => (
+            <div key={section.label}>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-2 mb-1.5">{section.label}</p>
+              <div className="space-y-0.5">
+                {section.items.map(item => (
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    className={`flex items-center justify-between px-2 py-2 rounded-lg text-sm transition-colors no-underline group ${
+                      (item as any).active
+                        ? 'bg-emerald-500/15 text-emerald-400 font-semibold'
+                        : 'text-slate-400 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-base leading-none opacity-70">{item.icon}</span>
+                      <span>{item.label}</span>
+                    </div>
+                    {(item as any).badge !== undefined && (item as any).badge > 0 && (
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                        (item as any).alert ? 'bg-amber-500/25 text-amber-400' : 'bg-white/8 text-slate-400'
+                      }`}>
+                        {(item as any).badge > 999 ? '999+' : (item as any).badge}
+                      </span>
+                    )}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ))}
+        </nav>
+
+        {/* User */}
+        <div className="px-3 py-4 border-t border-white/6">
+          <div className="flex items-center gap-2.5 px-2">
+            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-400 to-sky-500 flex items-center justify-center text-white text-xs font-black flex-shrink-0">
+              {(user.name || user.email || 'A')[0].toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-white truncate">{user.name || 'Admin'}</p>
+              <p className="text-[10px] text-slate-500 truncate">{user.email}</p>
+            </div>
           </div>
         </div>
-      </header>
+      </aside>
 
-      <div className="max-w-[1400px] mx-auto px-6 py-8">
+      {/* ── Main ─────────────────────────────────────────── */}
+      <div className="flex-1 min-w-0">
 
-        {/* Page title */}
-        <div className="flex items-center justify-between mb-8">
+        {/* Top bar */}
+        <header className="border-b border-white/6 bg-slate-900/40 backdrop-blur-sm sticky top-0 z-40 px-6 py-3.5 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-extrabold text-white">Overview</h1>
-            <p className="text-slate-400 text-sm mt-1">Live data from your AICashMaker platform</p>
+            <h1 className="text-base font-extrabold text-white leading-none">Dashboard</h1>
+            <p className="text-xs text-slate-500 mt-0.5">Live platform overview</p>
           </div>
-          <div className="flex gap-2">
-            <Link href="/admin/collections/tool-submissions" className="flex items-center gap-2 text-xs bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 border border-amber-500/25 px-3 py-2 rounded-lg transition-colors no-underline">
-              <span>🔔</span>
-              <span>{(stats?.toolSubsCount || 0) + (stats?.productSubsCount || 0)} pending reviews</span>
-            </Link>
-            <Link href="/admin/collections/affiliates/create" className="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-lg transition-colors no-underline font-semibold">
+          <div className="flex items-center gap-2">
+            {pendingCount > 0 && (
+              <Link
+                href="/admin/collections/tool-submissions"
+                className="flex items-center gap-1.5 text-xs bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 border border-amber-500/20 px-3 py-1.5 rounded-lg transition-colors no-underline font-semibold"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                {pendingCount} pending
+              </Link>
+            )}
+            <Link
+              href="/admin/collections/affiliates/create"
+              className="text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded-lg transition-colors no-underline"
+            >
               + New Affiliate
             </Link>
           </div>
-        </div>
+        </header>
 
-        {/* Revenue stat cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {statCards.map(({ label, value, sub, color, bg }) => (
-            <div key={label} className={`bg-slate-900 border rounded-2xl p-5 ${bg}`}>
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">{label}</p>
-              <p className={`text-3xl font-extrabold ${color} mb-1`}>{value}</p>
-              <p className="text-xs text-slate-500">{sub}</p>
-            </div>
-          ))}
-        </div>
+        <div className="px-6 py-7 max-w-[1200px]">
 
-        {/* Content inventory */}
-        <div className="bg-slate-900 border border-white/8 rounded-2xl p-6 mb-6">
-          <h2 className="text-sm font-bold text-slate-300 uppercase tracking-wider mb-4">Content Inventory</h2>
-          <div className="grid grid-cols-3 sm:grid-cols-6 gap-4">
-            {contentStats.map(({ label, value, href, icon, highlight }) => (
-              <Link key={label} href={href} className={`no-underline rounded-xl p-4 text-center transition-all hover:scale-105 ${highlight && value > 0 ? 'bg-amber-500/15 border border-amber-500/25' : 'bg-slate-800 border border-white/5'}`}>
-                <div className="text-2xl mb-1">{icon}</div>
-                <div className={`text-2xl font-extrabold ${highlight && value > 0 ? 'text-amber-400' : 'text-white'}`}>{value}</div>
-                <div className={`text-xs mt-1 ${highlight && value > 0 ? 'text-amber-300' : 'text-slate-400'}`}>{label}</div>
-              </Link>
+          {/* ── KPI Cards ─── */}
+          <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-7">
+            {[
+              {
+                label: 'Gross Revenue',
+                value: fmt(stats?.totalRevenue || 0),
+                sub: `${stats?.paidOrdersCount || 0} paid orders`,
+                color: 'text-emerald-400',
+                border: 'border-emerald-500/20',
+                glow: 'from-emerald-500/5 to-transparent',
+                icon: '↑',
+              },
+              {
+                label: 'Platform Net',
+                value: fmt(stats?.totalPlatformFee || 0),
+                sub: '20% platform fee',
+                color: 'text-sky-400',
+                border: 'border-sky-500/20',
+                glow: 'from-sky-500/5 to-transparent',
+                icon: '◎',
+              },
+              {
+                label: 'Affiliate Payouts',
+                value: fmt(stats?.totalAffiliatePaid || 0),
+                sub: `${stats?.affiliatesCount || 0} active partners`,
+                color: 'text-violet-400',
+                border: 'border-violet-500/20',
+                glow: 'from-violet-500/5 to-transparent',
+                icon: '◈',
+              },
+              {
+                label: 'Email List',
+                value: (stats?.subscribersCount || 0).toLocaleString(),
+                sub: 'Newsletter subscribers',
+                color: 'text-pink-400',
+                border: 'border-pink-500/20',
+                glow: 'from-pink-500/5 to-transparent',
+                icon: '◉',
+              },
+            ].map(({ label, value, sub, color, border, glow, icon }) => (
+              <div key={label} className={`relative overflow-hidden bg-slate-900 border ${border} rounded-2xl p-5`}>
+                <div className={`absolute inset-0 bg-gradient-to-br ${glow} pointer-events-none`} />
+                <div className="relative">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{label}</p>
+                    <span className={`text-base ${color} opacity-50`}>{icon}</span>
+                  </div>
+                  <p className={`text-2xl font-extrabold ${color} mb-1`}>{value}</p>
+                  <p className="text-xs text-slate-500">{sub}</p>
+                </div>
+              </div>
             ))}
           </div>
-        </div>
 
-        <div className="grid lg:grid-cols-2 gap-6 mb-6">
-          {/* Recent Orders */}
-          <div className="bg-slate-900 border border-white/8 rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-bold text-slate-300 uppercase tracking-wider">Recent Orders</h2>
-              <Link href="/admin/collections/orders" className="text-xs text-sky-400 hover:text-sky-300 no-underline">View all →</Link>
-            </div>
-            {!stats?.recentOrders?.length ? (
-              <div className="text-center py-8">
-                <p className="text-slate-500 text-sm">No orders yet</p>
-                <p className="text-slate-600 text-xs mt-1">Orders will appear here once customers make purchases</p>
+          {/* ── Revenue Chart + Content Inventory ─── */}
+          <div className="grid xl:grid-cols-5 gap-5 mb-5">
+
+            {/* Revenue bar chart (3 cols) */}
+            <div className="xl:col-span-3 bg-slate-900 border border-white/6 rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-sm font-bold text-white">Monthly Revenue</h2>
+                  <p className="text-xs text-slate-500 mt-0.5">Last 6 months · gross sales</p>
+                </div>
+                <span className="text-xs text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-1 rounded-lg">
+                  {fmt(stats?.totalRevenue || 0)} total
+                </span>
               </div>
-            ) : (
-              <div className="space-y-2">
-                {stats.recentOrders.slice(0, 8).map((order: any) => (
-                  <div key={order.id} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${order.status === 'paid' ? 'bg-emerald-400' : order.status === 'pending' ? 'bg-amber-400' : 'bg-slate-500'}`} />
-                      <div className="min-w-0">
-                        <p className="text-sm text-white font-medium truncate">{order.buyerEmail}</p>
-                        <p className="text-xs text-slate-500">{order.orderType}</p>
+              <div className="flex items-end gap-3 h-32">
+                {(stats?.monthlyRevenue || []).map(({ label, revenue }) => {
+                  const pct = stats?.maxMonthRevenue ? (revenue / stats.maxMonthRevenue) * 100 : 0
+                  return (
+                    <div key={label} className="flex-1 flex flex-col items-center gap-1.5">
+                      <span className="text-[10px] text-slate-500 font-mono">{revenue > 0 ? fmtShort(revenue) : ''}</span>
+                      <div className="w-full relative flex items-end" style={{ height: '80px' }}>
+                        <div
+                          className="w-full rounded-t-lg bg-gradient-to-t from-emerald-600 to-emerald-400 transition-all"
+                          style={{ height: `${Math.max(pct, revenue > 0 ? 4 : 0)}%`, minHeight: revenue > 0 ? '4px' : '0' }}
+                        />
+                        {revenue === 0 && (
+                          <div className="w-full h-0.5 bg-slate-800 rounded absolute bottom-0" />
+                        )}
                       </div>
+                      <span className="text-[10px] text-slate-500 font-medium">{label}</span>
                     </div>
-                    <div className="text-right flex-shrink-0 ml-3">
-                      <p className="text-sm font-bold text-emerald-400">{fmt(order.amount || 0)}</p>
-                      <p className="text-xs text-slate-500">{new Date(order.createdAt).toLocaleDateString()}</p>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
-            )}
+            </div>
+
+            {/* Content inventory (2 cols) */}
+            <div className="xl:col-span-2 bg-slate-900 border border-white/6 rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-sm font-bold text-white">Content</h2>
+                <span className="text-xs text-slate-500">Published items</span>
+              </div>
+              <div className="space-y-2.5">
+                {[
+                  { label: 'AI Tools', value: stats?.toolsCount || 0, href: '/admin/collections/tools', color: 'bg-sky-500' },
+                  { label: 'Blog Posts', value: stats?.blogPostsCount || 0, href: '/admin/collections/blog-posts', color: 'bg-violet-500' },
+                  { label: 'Prompt Packs', value: stats?.promptsCount || 0, href: '/admin/collections/prompts', color: 'bg-pink-500' },
+                  { label: 'Automations', value: stats?.automationsCount || 0, href: '/admin/collections/automations', color: 'bg-emerald-500' },
+                  { label: 'Side Hustles', value: stats?.sideHustlesCount || 0, href: '/admin/collections/side-hustles', color: 'bg-amber-500' },
+                ].map(({ label, value, href, color }) => {
+                  const max = Math.max(stats?.toolsCount || 0, stats?.blogPostsCount || 0, stats?.promptsCount || 0, stats?.automationsCount || 0, stats?.sideHustlesCount || 0, 1)
+                  const pct = (value / max) * 100
+                  return (
+                    <Link key={label} href={href} className="no-underline flex items-center gap-3 group">
+                      <span className="text-xs text-slate-400 w-24 group-hover:text-white transition-colors">{label}</span>
+                      <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                        <div className={`h-full ${color} rounded-full transition-all`} style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className="text-xs font-bold text-white w-6 text-right">{value}</span>
+                    </Link>
+                  )
+                })}
+              </div>
+              {pendingCount > 0 && (
+                <Link
+                  href="/admin/collections/tool-submissions"
+                  className="no-underline mt-5 flex items-center justify-between bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-2.5"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                    <span className="text-xs font-semibold text-amber-400">{pendingCount} submissions pending review</span>
+                  </div>
+                  <span className="text-amber-400 text-xs">→</span>
+                </Link>
+              )}
+            </div>
           </div>
 
-          {/* Top Affiliates */}
-          <div className="bg-slate-900 border border-white/8 rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-bold text-slate-300 uppercase tracking-wider">Top Affiliates</h2>
-              <Link href="/admin/collections/affiliates" className="text-xs text-sky-400 hover:text-sky-300 no-underline">Manage →</Link>
-            </div>
-            {!stats?.topAffiliates?.length ? (
-              <div className="text-center py-8">
-                <p className="text-slate-500 text-sm">No affiliates yet</p>
-                <Link href="/admin/collections/affiliates/create" className="text-xs text-emerald-400 hover:text-emerald-300 no-underline mt-2 block">
-                  + Create your first affiliate →
+          {/* ── Orders Table + Affiliate Leaderboard ─── */}
+          <div className="grid xl:grid-cols-5 gap-5 mb-5">
+
+            {/* Orders (3 cols) */}
+            <div className="xl:col-span-3 bg-slate-900 border border-white/6 rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-sm font-bold text-white">Recent Orders</h2>
+                <Link href="/admin/collections/orders" className="text-xs text-sky-400 hover:text-sky-300 no-underline">
+                  View all →
                 </Link>
               </div>
-            ) : (
-              <div className="space-y-3">
-                {stats.topAffiliates.map((aff: any, i: number) => (
-                  <div key={aff.id} className="flex items-center gap-3">
-                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-sky-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                      {i + 1}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-semibold text-white truncate">{aff.displayName}</p>
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${aff.status === 'active' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-slate-700 text-slate-400'}`}>
-                          {aff.status}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-500">{aff.totalClicks || 0} clicks · {aff.totalConversions || 0} conversions · {aff.commissionRate}%</p>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-sm font-bold text-violet-400">{fmt(aff.totalEarned || 0)}</p>
-                      <p className="text-xs text-slate-500">earned</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="bg-slate-900 border border-white/8 rounded-2xl p-6">
-          <h2 className="text-sm font-bold text-slate-300 uppercase tracking-wider mb-4">Quick Actions</h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            {[
-              { label: 'Create Blog Post', desc: 'Publish new content', href: '/admin/collections/blog-posts/create', icon: '📝', color: 'border-sky-500/20 hover:border-sky-400/40' },
-              { label: 'Add AI Tool', desc: 'Add to tools directory', href: '/admin/collections/tools/create', icon: '🛠️', color: 'border-emerald-500/20 hover:border-emerald-400/40' },
-              { label: 'Review Submissions', desc: `${(stats?.toolSubsCount || 0) + (stats?.productSubsCount || 0)} pending`, href: '/admin/collections/tool-submissions', icon: '🔔', color: 'border-amber-500/20 hover:border-amber-400/40' },
-              { label: 'Manage Affiliates', desc: `${stats?.affiliatesCount || 0} partners`, href: '/admin/collections/affiliates', icon: '🤝', color: 'border-violet-500/20 hover:border-violet-400/40' },
-              { label: 'Add Prompt Pack', desc: 'Add to marketplace', href: '/admin/collections/prompts/create', icon: '✨', color: 'border-violet-500/20 hover:border-violet-400/40' },
-              { label: 'Add Automation', desc: 'Add workflow template', href: '/admin/collections/automations/create', icon: '⚡', color: 'border-emerald-500/20 hover:border-emerald-400/40' },
-              { label: 'Newsletter List', desc: `${(stats?.subscribersCount || 0).toLocaleString()} subscribers`, href: '/admin/collections/newsletter-subscribers', icon: '✉️', color: 'border-pink-500/20 hover:border-pink-400/40' },
-              { label: 'View Live Site', desc: 'Open aicashmaker.com', href: '/', icon: '🌐', color: 'border-slate-500/20 hover:border-slate-400/40' },
-            ].map(({ label, desc, href, icon, color }) => (
-              <Link
-                key={label}
-                href={href}
-                className={`no-underline bg-slate-800 border ${color} rounded-xl p-4 flex items-start gap-3 transition-all hover:bg-slate-700/50`}
-              >
-                <span className="text-xl mt-0.5">{icon}</span>
-                <div>
-                  <p className="text-sm font-semibold text-white">{label}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">{desc}</p>
+              {!stats?.recentOrders?.length ? (
+                <div className="text-center py-10">
+                  <p className="text-slate-500 text-sm">No orders yet</p>
+                  <p className="text-slate-600 text-xs mt-1">Orders appear here once customers make purchases</p>
                 </div>
-              </Link>
-            ))}
-          </div>
-        </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-white/6">
+                        {['Buyer', 'Type', 'Status', 'Amount', 'Date'].map(h => (
+                          <th key={h} className="text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider pb-3 pr-4 last:pr-0 last:text-right">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {stats.recentOrders.slice(0, 10).map((order: any) => (
+                        <tr key={order.id} className="border-b border-white/4 last:border-0 hover:bg-white/2 transition-colors">
+                          <td className="py-2.5 pr-4">
+                            <p className="text-xs font-medium text-white truncate max-w-[140px]">{order.buyerEmail}</p>
+                          </td>
+                          <td className="py-2.5 pr-4">
+                            <span className="text-xs text-slate-400">{order.orderType || '—'}</span>
+                          </td>
+                          <td className="py-2.5 pr-4">
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              order.status === 'paid' ? 'bg-emerald-500/15 text-emerald-400'
+                              : order.status === 'pending' ? 'bg-amber-500/15 text-amber-400'
+                              : order.status === 'refunded' ? 'bg-red-500/15 text-red-400'
+                              : 'bg-slate-700 text-slate-400'
+                            }`}>
+                              {order.status}
+                            </span>
+                          </td>
+                          <td className="py-2.5 pr-4">
+                            <span className="text-xs font-bold text-emerald-400">{fmt(order.amount || 0)}</span>
+                          </td>
+                          <td className="py-2.5 text-right">
+                            <span className="text-xs text-slate-500">{new Date(order.createdAt).toLocaleDateString()}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
 
+            {/* Affiliates (2 cols) */}
+            <div className="xl:col-span-2 bg-slate-900 border border-white/6 rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-sm font-bold text-white">Affiliate Leaderboard</h2>
+                <Link href="/admin/collections/affiliates" className="text-xs text-sky-400 hover:text-sky-300 no-underline">
+                  Manage →
+                </Link>
+              </div>
+              {!stats?.topAffiliates?.length ? (
+                <div className="text-center py-10">
+                  <p className="text-slate-500 text-sm">No affiliates yet</p>
+                  <Link href="/admin/collections/affiliates/create" className="text-xs text-emerald-400 hover:text-emerald-300 no-underline mt-2 block">
+                    + Create first affiliate →
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {stats.topAffiliates.map((aff: any, i: number) => {
+                    const maxEarned = Math.max(...stats.topAffiliates.map((a: any) => a.totalEarned || 0), 1)
+                    const pct = ((aff.totalEarned || 0) / maxEarned) * 100
+                    const rankColors = ['from-amber-400 to-yellow-300', 'from-slate-400 to-slate-300', 'from-amber-700 to-amber-600']
+                    return (
+                      <div key={aff.id} className="flex items-start gap-3">
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-black flex-shrink-0 mt-0.5 ${i < 3 ? `bg-gradient-to-br ${rankColors[i]}` : 'bg-slate-700'}`}>
+                          {i + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm font-semibold text-white truncate">{aff.displayName}</span>
+                            <span className="text-xs font-bold text-violet-400 ml-2 flex-shrink-0">{fmt(aff.totalEarned || 0)}</span>
+                          </div>
+                          <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden mb-1">
+                            <div
+                              className={`h-full rounded-full bg-gradient-to-r ${i === 0 ? 'from-violet-500 to-pink-500' : 'from-violet-600 to-violet-400'}`}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-slate-500">{aff.totalClicks || 0} clicks · {aff.totalConversions || 0} conv</span>
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${aff.status === 'active' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-slate-700 text-slate-400'}`}>
+                              {aff.status}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── Quick Actions ─── */}
+          <div className="bg-slate-900 border border-white/6 rounded-2xl p-6">
+            <h2 className="text-sm font-bold text-white mb-4">Quick Actions</h2>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {[
+                { label: 'New Blog Post', desc: 'Publish article', href: '/admin/collections/blog-posts/create', color: 'group-hover:border-sky-400/50', icon: '📝' },
+                { label: 'Add AI Tool', desc: 'Tools directory', href: '/admin/collections/tools/create', color: 'group-hover:border-emerald-400/50', icon: '🛠️' },
+                { label: 'Add Prompt Pack', desc: 'Prompt marketplace', href: '/admin/collections/prompts/create', color: 'group-hover:border-violet-400/50', icon: '✨' },
+                { label: 'Add Automation', desc: 'Workflow templates', href: '/admin/collections/automations/create', color: 'group-hover:border-pink-400/50', icon: '⚡' },
+                { label: 'New Affiliate', desc: 'Create partner', href: '/admin/collections/affiliates/create', color: 'group-hover:border-violet-400/50', icon: '🤝' },
+                { label: 'Review Submissions', desc: `${pendingCount} pending`, href: '/admin/collections/tool-submissions', color: 'group-hover:border-amber-400/50', icon: '🔔' },
+                { label: 'Subscribers', desc: `${(stats?.subscribersCount || 0).toLocaleString()} emails`, href: '/admin/collections/newsletter-subscribers', color: 'group-hover:border-pink-400/50', icon: '✉️' },
+                { label: 'Payload CMS', desc: 'Full admin panel', href: '/admin', color: 'group-hover:border-slate-400/50', icon: '⚙️' },
+              ].map(({ label, desc, href, icon, color }) => (
+                <Link
+                  key={label}
+                  href={href}
+                  className={`group no-underline bg-slate-800/60 hover:bg-slate-800 border border-white/5 ${color} rounded-xl p-4 flex items-start gap-3 transition-all`}
+                >
+                  <span className="text-xl mt-0.5 flex-shrink-0">{icon}</span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">{label}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">{desc}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+        </div>
       </div>
     </div>
   )

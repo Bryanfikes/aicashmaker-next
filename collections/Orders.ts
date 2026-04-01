@@ -20,6 +20,8 @@ export const Orders: CollectionConfig = {
       required: true,
       options: [
         { label: 'Product Purchase', value: 'product' },
+        { label: 'Automation Template', value: 'automation' },
+        { label: 'Prompt Pack', value: 'prompt' },
         { label: 'Featured Listing', value: 'featured-listing' },
         { label: 'Newsletter Sponsorship', value: 'newsletter-sponsorship' },
         { label: 'Full Review', value: 'full-review' },

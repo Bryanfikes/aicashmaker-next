@@ -4,7 +4,14 @@
  * Creates the first admin user in the database.
  * Only needed when setting up a fresh Payload instance.
  */
-import 'dotenv/config'
+import { config as dotenvConfig } from 'dotenv'
+import { expand } from 'dotenv-expand'
+import path from 'path'
+
+// Load .env.local first (Next.js convention), fall back to .env
+expand(dotenvConfig({ path: path.resolve(process.cwd(), '.env.local') }))
+expand(dotenvConfig({ path: path.resolve(process.cwd(), '.env') }))
+
 import { getPayload } from 'payload'
 import config from '../payload.config'
 
@@ -18,6 +25,7 @@ async function seedAdmin() {
   const existing = await payload.find({
     collection: 'users',
     limit: 1,
+    overrideAccess: true,
   })
 
   if (existing.totalDocs > 0) {
@@ -28,10 +36,12 @@ async function seedAdmin() {
   const user = await payload.create({
     collection: 'users',
     data: {
+      name: 'Admin',
       email,
       password,
       role: 'super-admin',
     },
+    overrideAccess: true,
   })
 
   console.log(`\n✅ Admin user created!`)
