@@ -158,7 +158,6 @@ export default async function ToolsPage() {
                   badge={(tool as any).badge}
                   featured={tool.featured}
                   affiliateLink={(tool as any).affiliateLink}
-                  externalUrl={(tool as any).url}
                 />
               ))}
             </div>
