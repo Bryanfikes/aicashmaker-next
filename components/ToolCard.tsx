@@ -17,6 +17,7 @@ interface ToolCardProps {
   badge?: string
   featured?: boolean
   affiliateLink?: string
+  externalUrl?: string
 }
 
 export default function ToolCard({
@@ -36,6 +37,7 @@ export default function ToolCard({
   badge,
   featured,
   affiliateLink,
+  externalUrl,
 }: ToolCardProps) {
   const stars = rating ? Math.round(rating * 2) / 2 : 0
   const fullStars = Math.floor(stars)
@@ -51,11 +53,10 @@ export default function ToolCard({
       ? `$${incomeLow.toLocaleString()}+/mo`
       : null
 
-  return (
-    <Link
-      href={`/tools/${slug}`}
-      className="group block bg-white border border-slate-200 rounded-2xl p-5 hover:border-sky-300 hover:shadow-lg hover:-translate-y-0.5 transition-all no-underline"
-    >
+  const cardCls = "group block bg-white border border-slate-200 rounded-2xl p-5 hover:border-sky-300 hover:shadow-lg hover:-translate-y-0.5 transition-all no-underline"
+
+  const inner = (
+    <>
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex items-center gap-3">
           {/* Icon */}
@@ -144,6 +145,28 @@ export default function ToolCard({
           )}
         </div>
       </div>
+    </>
+  )
+
+  if (externalUrl) {
+    return (
+      <a
+        href={externalUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={cardCls}
+      >
+        {inner}
+      </a>
+    )
+  }
+
+  return (
+    <Link
+      href={`/tools/${slug}`}
+      className={cardCls}
+    >
+      {inner}
     </Link>
   )
 }

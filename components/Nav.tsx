@@ -79,10 +79,10 @@ export default function Nav() {
         {/* Desktop CTAs */}
         <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
           <Link
-            href="/submit-tool"
+            href="/list-your-product"
             className="inline-flex items-center text-sm font-semibold px-4 py-2 rounded-xl border border-slate-200 text-slate-700 hover:border-sky-300 hover:text-sky-600 transition-colors no-underline"
           >
-            Submit a Tool
+            List Your Product
           </Link>
           <Link
             href="/newsletter"
@@ -126,11 +126,11 @@ export default function Nav() {
           </ul>
           <div className="flex gap-2 mt-3 pt-3 border-t border-slate-100">
             <Link
-              href="/submit-tool"
+              href="/list-your-product"
               className="flex-1 text-center text-sm font-semibold py-2.5 rounded-xl border border-slate-200 text-slate-700 no-underline"
               onClick={() => setMenuOpen(false)}
             >
-              Submit a Tool
+              List Your Product
             </Link>
             <Link
               href="/newsletter"
