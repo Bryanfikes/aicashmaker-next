@@ -1,6 +1,7 @@
 import { Metadata } from 'next'
 import Link from 'next/link'
 import { getPayload } from '@/lib/payload'
+import AdUnit from '@/components/AdUnit'
 
 export const metadata: Metadata = {
   title: 'Blog — AI Income Strategies, Guides & Case Studies',
@@ -288,6 +289,10 @@ export default async function BlogPage() {
           </div>
         </div>
 
+        {/* Leaderboard banner — below blog posts */}
+        <div className="py-6 overflow-hidden flex justify-center">
+          <AdUnit size="leaderboard" placement="blog" />
+        </div>
       </div>
     </>
   )

@@ -22,6 +22,7 @@ import { Affiliates } from './collections/Affiliates'
 import { AffiliateReferrals } from './collections/AffiliateReferrals'
 import { Prompts } from './collections/Prompts'
 import { Automations } from './collections/Automations'
+import { Advertisements } from './collections/Advertisements'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -29,11 +30,24 @@ const dirname = path.dirname(filename)
 export default buildConfig({
   admin: {
     user: Users.slug,
+    theme: 'dark',
     importMap: {
       baseDir: path.resolve(dirname),
     },
     meta: {
       titleSuffix: '— AICashMaker Admin',
+    },
+    components: {
+      graphics: {
+        Logo: '@/components/admin/AdminLogo',
+        Icon: '@/components/admin/AdminLogo',
+      },
+      beforeNavLinks: ['@/components/admin/AdminNavHeader'],
+      views: {
+        dashboard: {
+          Component: '@/components/admin/AdminDashboard',
+        },
+      },
     },
   },
   collections: [
@@ -54,6 +68,7 @@ export default buildConfig({
     AffiliateReferrals,
     Prompts,
     Automations,
+    Advertisements,
   ],
   editor: lexicalEditor(),
   sharp,

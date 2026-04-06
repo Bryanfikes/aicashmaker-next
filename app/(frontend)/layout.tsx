@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import Nav from '@/components/Nav'
 import Footer from '@/components/Footer'
+import AdUnit from '@/components/AdUnit'
 import './globals.css'
 
 const inter = Inter({
@@ -45,6 +46,14 @@ export default function FrontendLayout({
       </head>
       <body className="font-sans">
         <Nav />
+        {/* Leaderboard 728×90 — global, below nav */}
+        <div className="bg-slate-50 border-b border-slate-100 py-2 px-4 hidden sm:flex justify-center overflow-hidden">
+          <AdUnit size="leaderboard" placement="global" />
+        </div>
+        {/* Mobile Banner 320×50 — shown only on small screens */}
+        <div className="sm:hidden py-1 px-2 bg-slate-50 border-b border-slate-100 flex justify-center overflow-hidden">
+          <AdUnit size="mobile-banner" placement="global" />
+        </div>
         <main>{children}</main>
         <Footer />
         <Analytics />

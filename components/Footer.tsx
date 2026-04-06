@@ -82,12 +82,22 @@ export default function Footer() {
 
         <div className="border-t border-slate-800 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs text-slate-600">© 2025 AICashMaker.com</p>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap justify-center">
             {[['Privacy', '/privacy'], ['Terms', '/terms'], ['Affiliate Disclosure', '/affiliate-disclosure']].map(([label, href]) => (
               <Link key={href} href={href} className="text-xs text-slate-600 hover:text-slate-400 transition-colors no-underline">
                 {label}
               </Link>
             ))}
+            <span className="text-slate-700 text-xs hidden sm:inline">·</span>
+            <Link href="/login" className="text-xs text-slate-500 hover:text-white transition-colors no-underline">
+              User Login
+            </Link>
+            <Link
+              href="/admin"
+              className="text-xs text-slate-600 hover:text-sky-400 transition-colors no-underline"
+            >
+              Admin Login
+            </Link>
           </div>
         </div>
       </div>

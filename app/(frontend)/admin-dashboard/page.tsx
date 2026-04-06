@@ -2,6 +2,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getPayload } from '@/lib/payload'
+import { ADVERTISER_PRESETS } from '@/lib/ads'
 
 export const dynamic = 'force-dynamic'
 
@@ -97,6 +98,23 @@ async function getStats() {
   }
 }
 
+async function getAdStats() {
+  try {
+    const payload = await getPayload()
+    const [allAds, activeAds] = await Promise.all([
+      payload.find({ collection: 'advertisements', limit: 50, sort: '-priority', overrideAccess: true }),
+      payload.find({ collection: 'advertisements', where: { status: { equals: 'active' } }, limit: 50, sort: '-priority', overrideAccess: true }),
+    ])
+    return {
+      totalAds: allAds.totalDocs,
+      activeAds: activeAds.totalDocs,
+      ads: allAds.docs as any[],
+    }
+  } catch {
+    return { totalAds: 0, activeAds: 0, ads: [] }
+  }
+}
+
 function fmt(cents: number) {
   return '$' + (cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
@@ -111,7 +129,7 @@ export default async function AdminDashboardPage() {
   const user = await getAdminUser()
   if (!user || user.role !== 'super-admin') redirect('/admin')
 
-  const stats = await getStats()
+  const [stats, adStats] = await Promise.all([getStats(), getAdStats()])
   const pendingCount = (stats?.pendingSubsCount || 0) + (stats?.productSubsCount || 0)
 
   const navSections = [
@@ -146,6 +164,13 @@ export default async function AdminDashboardPage() {
         { icon: '◉', label: 'Prompt Packs', href: '/admin/collections/prompts', badge: stats?.promptsCount },
         { icon: '◎', label: 'Automations', href: '/admin/collections/automations', badge: stats?.automationsCount },
         { icon: '◇', label: 'Side Hustles', href: '/admin/collections/side-hustles', badge: stats?.sideHustlesCount },
+      ],
+    },
+    {
+      label: 'Advertising',
+      items: [
+        { icon: '◈', label: 'Ad Manager', href: '/admin/collections/advertisements', badge: adStats.activeAds },
+        { icon: '◎', label: 'New Ad Unit', href: '/admin/collections/advertisements/create' },
       ],
     },
     {
@@ -495,7 +520,7 @@ export default async function AdminDashboardPage() {
           </div>
 
           {/* ── Quick Actions ─── */}
-          <div className="bg-slate-900 border border-white/6 rounded-2xl p-6">
+          <div className="bg-slate-900 border border-white/6 rounded-2xl p-6 mb-5">
             <h2 className="text-sm font-bold text-white mb-4">Quick Actions</h2>
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {[
@@ -506,6 +531,7 @@ export default async function AdminDashboardPage() {
                 { label: 'New Affiliate', desc: 'Create partner', href: '/admin/collections/affiliates/create', color: 'group-hover:border-violet-400/50', icon: '🤝' },
                 { label: 'Review Submissions', desc: `${pendingCount} pending`, href: '/admin/collections/tool-submissions', color: 'group-hover:border-amber-400/50', icon: '🔔' },
                 { label: 'Subscribers', desc: `${(stats?.subscribersCount || 0).toLocaleString()} emails`, href: '/admin/collections/newsletter-subscribers', color: 'group-hover:border-pink-400/50', icon: '✉️' },
+                { label: 'Ad Mockups', desc: 'Preview all ad sizes', href: '/ad-preview', color: 'group-hover:border-violet-400/50', icon: '🖼️' },
                 { label: 'Payload CMS', desc: 'Full admin panel', href: '/admin', color: 'group-hover:border-slate-400/50', icon: '⚙️' },
               ].map(({ label, desc, href, icon, color }) => (
                 <Link
@@ -520,6 +546,168 @@ export default async function AdminDashboardPage() {
                   </div>
                 </Link>
               ))}
+            </div>
+          </div>
+
+          {/* ── Advertising Manager ─── */}
+          <div className="bg-slate-900 border border-white/6 rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h2 className="text-sm font-bold text-white">Advertising Manager</h2>
+                <p className="text-xs text-slate-500 mt-0.5">Voice Bonsai · BonsaiX · House Ads</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold bg-emerald-500/15 text-emerald-400 px-2.5 py-1 rounded-lg">
+                  {adStats.activeAds} active
+                </span>
+                <Link
+                  href="/ad-preview"
+                  className="text-xs bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 font-bold px-3 py-1.5 rounded-lg transition-colors no-underline border border-violet-500/20"
+                >
+                  Preview Ads
+                </Link>
+                <Link
+                  href="/admin/collections/advertisements/create"
+                  className="text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded-lg transition-colors no-underline"
+                >
+                  + New Ad
+                </Link>
+              </div>
+            </div>
+
+            {/* KPI row */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+              {[
+                { label: 'Total Ads', value: adStats.totalAds || 0, sub: 'all units', color: 'text-sky-400', border: 'border-sky-500/20' },
+                { label: 'Active', value: adStats.activeAds || 0, sub: 'running now', color: 'text-emerald-400', border: 'border-emerald-500/20' },
+                { label: 'Impressions', value: adStats.ads.reduce((s: number, a: any) => s + (a.impressions || 0), 0).toLocaleString(), sub: 'total views', color: 'text-violet-400', border: 'border-violet-500/20' },
+                { label: 'Clicks', value: adStats.ads.reduce((s: number, a: any) => s + (a.clicks || 0), 0).toLocaleString(), sub: 'total clicks', color: 'text-pink-400', border: 'border-pink-500/20' },
+              ].map(({ label, value, sub, color, border }) => (
+                <div key={label} className={`bg-slate-800/60 border ${border} rounded-xl p-3`}>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">{label}</p>
+                  <p className={`text-lg font-extrabold ${color}`}>{value}</p>
+                  <p className="text-[10px] text-slate-600">{sub}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Ad Units table or empty state */}
+            {adStats.ads.length === 0 ? (
+              <div className="text-center py-10 border border-dashed border-white/10 rounded-xl">
+                <p className="text-2xl mb-3">◈</p>
+                <p className="text-sm font-semibold text-white mb-1">No ad units configured yet</p>
+                <p className="text-xs text-slate-500 mb-4">House ads (Voice Bonsai + BonsaiX) are running automatically.<br />Create Payload ads to override them with custom campaigns.</p>
+                <div className="flex items-center justify-center gap-3 flex-wrap">
+                  {[
+                    { label: 'Voice Bonsai', advertiser: 'voice-bonsai', emoji: '🎙️', url: 'https://voicebonsai.com' },
+                    { label: 'BonsaiX', advertiser: 'bonsaix', emoji: '🌿', url: 'https://bonsaix.ai' },
+                  ].map(({ label, advertiser, emoji, url }) => {
+                    const preset = ADVERTISER_PRESETS[advertiser]
+                    return (
+                      <div key={advertiser} className={`relative overflow-hidden rounded-xl bg-gradient-to-r ${preset.bgGradient} p-3 flex items-center gap-3 w-64`}>
+                        <span className="text-2xl">{emoji}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white font-bold text-xs">{label}</p>
+                          <p className="text-white/60 text-[10px] truncate">{url}</p>
+                          <span className="text-[9px] bg-white/20 text-white px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider">House Ad — Active</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+                <Link
+                  href="/admin/collections/advertisements/create"
+                  className="inline-block mt-5 text-xs text-emerald-400 hover:text-emerald-300 no-underline font-semibold"
+                >
+                  + Create your first campaign →
+                </Link>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-white/6">
+                      {['Ad Name', 'Advertiser', 'Size', 'Placement', 'Status', 'Priority', 'Impressions', ''].map(h => (
+                        <th key={h} className="text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider pb-3 pr-4 last:pr-0">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {adStats.ads.slice(0, 10).map((ad: any) => {
+                      const preset = ADVERTISER_PRESETS[ad.advertiser] ?? ADVERTISER_PRESETS.custom
+                      return (
+                        <tr key={ad.id} className="border-b border-white/4 last:border-0 hover:bg-white/2 transition-colors">
+                          <td className="py-2.5 pr-4">
+                            <div className="flex items-center gap-2">
+                              <span className="text-base">{preset.logoEmoji}</span>
+                              <p className="text-xs font-medium text-white truncate max-w-[160px]">{ad.name}</p>
+                            </div>
+                          </td>
+                          <td className="py-2.5 pr-4">
+                            <span className="text-xs text-slate-400 capitalize">{preset.logoText}</span>
+                          </td>
+                          <td className="py-2.5 pr-4">
+                            <span className="text-[10px] font-mono bg-slate-800 text-slate-300 px-2 py-0.5 rounded">{ad.size}</span>
+                          </td>
+                          <td className="py-2.5 pr-4">
+                            <span className="text-xs text-slate-400">{ad.placement}</span>
+                          </td>
+                          <td className="py-2.5 pr-4">
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              ad.status === 'active' ? 'bg-emerald-500/15 text-emerald-400'
+                              : ad.status === 'paused' ? 'bg-amber-500/15 text-amber-400'
+                              : ad.status === 'scheduled' ? 'bg-sky-500/15 text-sky-400'
+                              : 'bg-slate-700 text-slate-400'
+                            }`}>
+                              {ad.status}
+                            </span>
+                          </td>
+                          <td className="py-2.5 pr-4">
+                            <span className="text-xs text-slate-400">{ad.priority}</span>
+                          </td>
+                          <td className="py-2.5 pr-4">
+                            <span className="text-xs font-bold text-violet-400">{(ad.impressions || 0).toLocaleString()}</span>
+                          </td>
+                          <td className="py-2.5">
+                            <Link href={`/admin/collections/advertisements/${ad.id}`} className="text-xs text-sky-400 hover:text-sky-300 no-underline">
+                              Edit →
+                            </Link>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+                {adStats.totalAds > 10 && (
+                  <div className="mt-3 text-center">
+                    <Link href="/admin/collections/advertisements" className="text-xs text-sky-400 hover:text-sky-300 no-underline">
+                      View all {adStats.totalAds} ads →
+                    </Link>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Ad Size Reference */}
+            <div className="mt-6 border-t border-white/6 pt-5">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">7 Supported Ad Sizes</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2">
+                {[
+                  { size: 'Leaderboard', dims: '728×90', placement: 'Below nav, global' },
+                  { size: 'Billboard', dims: '970×250', placement: 'Homepage hero' },
+                  { size: 'Med. Rectangle', dims: '300×250', placement: 'Inline / sidebar' },
+                  { size: 'Lg. Rectangle', dims: '336×280', placement: 'Inline content' },
+                  { size: 'Half Page', dims: '300×600', placement: 'Sidebar' },
+                  { size: 'Mobile Banner', dims: '320×50', placement: 'Mobile only' },
+                  { size: 'Skyscraper', dims: '160×600', placement: 'Wide sidebar' },
+                ].map(({ size, dims, placement }) => (
+                  <div key={size} className="bg-slate-800/60 border border-white/5 rounded-lg p-2 text-center">
+                    <p className="text-[10px] font-bold text-white">{size}</p>
+                    <p className="text-[10px] font-mono text-emerald-400 mt-0.5">{dims}</p>
+                    <p className="text-[9px] text-slate-500 mt-0.5 leading-tight">{placement}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 

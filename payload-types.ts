@@ -141,3 +141,29 @@ export type BlogPost = {
   createdAt: string
   updatedAt: string
 }
+
+export type Advertisement = {
+  id: string
+  name: string
+  advertiser: 'voice-bonsai' | 'bonsaix' | 'bonsai-brain' | 'custom'
+  status: 'active' | 'paused' | 'scheduled' | 'expired'
+  priority?: number
+  size: 'leaderboard' | 'billboard' | 'medium-rectangle' | 'large-rectangle' | 'half-page' | 'mobile-banner' | 'skyscraper'
+  placement: 'global' | 'homepage' | 'tools' | 'blog' | 'side-hustles' | 'prompts' | 'automations' | 'deals'
+  startDate?: string | null
+  endDate?: string | null
+  headline: string
+  subtext?: string
+  ctaText?: string
+  ctaUrl: string
+  badge?: string
+  bgGradient?: string
+  accentColor?: string
+  logoEmoji?: string
+  logoImage?: string | Media | null
+  impressions?: number
+  clicks?: number
+  notes?: string
+  createdAt: string
+  updatedAt: string
+}

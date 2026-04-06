@@ -2,6 +2,7 @@ import { Metadata } from 'next'
 import Link from 'next/link'
 import { getPayload } from '@/lib/payload'
 import ToolCard from '@/components/ToolCard'
+import AdUnit from '@/components/AdUnit'
 
 export const metadata: Metadata = {
   title: 'AICashMaker — Make Money with AI Tools',
@@ -95,6 +96,14 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* Billboard / Leaderboard — below hero, responsive */}
+      <div className="py-3 px-4 bg-white border-b border-slate-100 overflow-hidden hidden lg:flex justify-center">
+        <AdUnit size="billboard" placement="homepage" />
+      </div>
+      <div className="py-3 px-4 bg-white border-b border-slate-100 overflow-hidden hidden sm:flex lg:hidden justify-center">
+        <AdUnit size="leaderboard" placement="homepage" />
+      </div>
+
       {/* Featured Tools */}
       <section className="py-16 px-4 bg-slate-50">
         <div className="max-w-7xl mx-auto">
@@ -145,6 +154,11 @@ export default async function HomePage() {
           )}
         </div>
       </section>
+
+      {/* Leaderboard banner — between Featured Tools and Side Hustles */}
+      <div className="py-5 px-4 overflow-hidden flex justify-center">
+        <AdUnit size="leaderboard" placement="homepage" />
+      </div>
 
       {/* Side Hustles */}
       <section className="py-16 px-4">
