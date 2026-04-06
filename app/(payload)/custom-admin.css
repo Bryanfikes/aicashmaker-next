@@ -1,0 +1,520 @@
+/* ============================================================
+   AICashMaker — Payload Admin Brand Theme
+   Dark slate + emerald accent — matches /admin-dashboard
+   ============================================================ */
+
+/* ── 1. Force dark mode & font ──────────────────────────────── */
+html {
+  color-scheme: dark;
+  --font-base: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* ── 2. Remap neutral color scale → AICashMaker slate ────────
+   Payload's `--color-base-*` goes 0 (white) → 1000 (black).
+   In dark mode these are INVERTED (0 = darkest, 1000 = lightest).
+   We remap to match our slate-950 palette.
+───────────────────────────────────────────────────────────── */
+:root {
+  /* Slate palette remapped to color-base scale */
+  --color-base-0:    rgb(2,   6,  23);   /* slate-950 */
+  --color-base-50:   rgb(7,  12,  33);
+  --color-base-100:  rgb(10, 16,  40);   /* slate-900 */
+  --color-base-150:  rgb(15, 23,  42);
+  --color-base-200:  rgb(17, 28,  54);   /* slightly lifted */
+  --color-base-250:  rgb(22, 34,  64);
+  --color-base-300:  rgb(30, 41,  59);   /* slate-800 */
+  --color-base-350:  rgb(40, 52,  72);
+  --color-base-400:  rgb(51, 65,  85);   /* slate-700 */
+  --color-base-450:  rgb(64, 80, 100);
+  --color-base-500:  rgb(71, 85, 105);   /* slate-600 */
+  --color-base-550:  rgb(95,110, 125);
+  --color-base-600:  rgb(100,116,139);   /* slate-500 */
+  --color-base-650:  rgb(120,135,155);
+  --color-base-700:  rgb(148,163,184);   /* slate-400 */
+  --color-base-750:  rgb(186,197,212);
+  --color-base-800:  rgb(203,213,225);   /* slate-300 */
+  --color-base-850:  rgb(226,232,240);   /* slate-200 */
+  --color-base-900:  rgb(241,245,249);   /* slate-100 */
+  --color-base-950:  rgb(248,250,252);   /* slate-50 */
+  --color-base-1000: rgb(255,255,255);   /* white */
+
+  /* Emerald green as the success/accent color */
+  --color-success-50:  rgb(236,253,245);
+  --color-success-100: rgb(209,250,229);
+  --color-success-150: rgb(167,243,208);
+  --color-success-200: rgb(110,231,183);
+  --color-success-250: rgb(52, 211,153);
+  --color-success-300: rgb(16, 185,129);
+  --color-success-350: rgb(5,  167,115);
+  --color-success-400: rgb(4,  155,107);
+  --color-success-450: rgb(3,  132, 90);
+  --color-success-500: rgb(5,  150,105);   /* emerald-600 */
+  --color-success-550: rgb(4,  120, 87);
+  --color-success-600: rgb(6,  95,  70);
+  --color-success-650: rgb(4,  78,  58);
+  --color-success-700: rgb(3,  61,  46);
+  --color-success-750: rgb(2,  50,  38);
+  --color-success-800: rgb(2,  40,  30);
+  --color-success-850: rgb(1,  30,  23);
+  --color-success-900: rgb(1,  22,  17);
+  --color-success-950: rgb(0,  15,  11);
+
+  /* Sky blue as the "error"/"info" override → brand sky */
+  --color-error-500: rgb(14, 165, 233);  /* sky-500 */
+
+  /* Consistent brand vars */
+  --aicm-emerald: rgb(16, 185, 129);
+  --aicm-sky: rgb(14, 165, 233);
+  --aicm-violet: rgb(139, 92, 246);
+  --aicm-slate-bg: rgb(2, 6, 23);
+  --aicm-border: rgba(255,255,255,0.06);
+}
+
+/* ── 3. Force dark theme elevations always ──────────────────── */
+html,
+html[data-theme='light'],
+html[data-theme='dark'] {
+  --theme-elevation-0:    var(--color-base-0);
+  --theme-elevation-50:   var(--color-base-50);
+  --theme-elevation-100:  var(--color-base-100);
+  --theme-elevation-150:  var(--color-base-150);
+  --theme-elevation-200:  var(--color-base-200);
+  --theme-elevation-250:  var(--color-base-250);
+  --theme-elevation-300:  var(--color-base-300);
+  --theme-elevation-350:  var(--color-base-350);
+  --theme-elevation-400:  var(--color-base-400);
+  --theme-elevation-450:  var(--color-base-450);
+  --theme-elevation-500:  var(--color-base-500);
+  --theme-elevation-550:  var(--color-base-550);
+  --theme-elevation-600:  var(--color-base-600);
+  --theme-elevation-650:  var(--color-base-650);
+  --theme-elevation-700:  var(--color-base-700);
+  --theme-elevation-750:  var(--color-base-750);
+  --theme-elevation-800:  var(--color-base-800);
+  --theme-elevation-850:  var(--color-base-850);
+  --theme-elevation-900:  var(--color-base-900);
+  --theme-elevation-950:  var(--color-base-950);
+  --theme-elevation-1000: var(--color-base-1000);
+  --theme-border-color:   rgba(255,255,255,0.06);
+  --theme-bg:             var(--color-base-0);
+  --theme-text:           var(--color-base-900);
+}
+
+/* ── 4. Root & body ─────────────────────────────────────────── */
+html, body {
+  background-color: rgb(2, 6, 23) !important;
+}
+
+/* ── 5. Header bar ──────────────────────────────────────────── */
+.app-header {
+  background: rgb(15, 23, 42) !important;
+  border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+  backdrop-filter: blur(12px) !important;
+}
+
+.app-header__bg {
+  background: rgb(15, 23, 42) !important;
+}
+
+/* ── 6. Sidebar / Nav ───────────────────────────────────────── */
+/* The nav wrapper rendered by @payloadcms/next */
+.template-default__nav,
+.nav,
+[class*="nav__wrap"],
+[class*="NavWrapper"] {
+  background-color: rgb(10, 16, 40) !important;
+  border-right: 1px solid rgba(255,255,255,0.06) !important;
+}
+
+/* Nav group headers (section labels like "Content", "Commerce") */
+.nav-group__toggle,
+.nav-group__label,
+[class*="nav-group__toggle"] {
+  color: rgba(100, 116, 139, 1) !important;  /* slate-500 */
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase !important;
+}
+
+/* Nav links */
+.nav-group a,
+.nav-group__content a,
+[class*="nav-link"],
+.nav a {
+  color: rgb(148, 163, 184) !important;  /* slate-400 */
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  border-radius: 8px !important;
+  padding: 7px 10px !important;
+  transition: background 0.15s, color 0.15s !important;
+  text-decoration: none !important;
+}
+
+.nav-group a:hover,
+.nav-group__content a:hover,
+[class*="nav-link"]:hover {
+  background: rgba(255,255,255,0.05) !important;
+  color: rgb(255, 255, 255) !important;
+}
+
+/* Active nav link */
+.nav-group a[aria-current="page"],
+[class*="nav-link--active"],
+[class*="active"] > a {
+  background: rgba(16, 185, 129, 0.12) !important;
+  color: rgb(52, 211, 153) !important;
+  font-weight: 600 !important;
+}
+
+/* ── 7. Main content area ──────────────────────────────────── */
+.template-default__wrap,
+[class*="template-default"],
+.collection-list,
+.collection-edit,
+.dashboard__wrap {
+  background-color: rgb(7, 12, 33) !important;
+}
+
+/* ── 8. Cards / panels ─────────────────────────────────────── */
+.render-fields,
+.field-type,
+[class*="collapsible__content"],
+[class*="card"],
+.doc-controls,
+.doc-fields {
+  background-color: rgb(10, 16, 40) !important;
+  border-color: rgba(255,255,255,0.06) !important;
+  border-radius: 12px !important;
+}
+
+/* ── 9. Table (collection list) ────────────────────────────── */
+table {
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+}
+
+thead tr,
+.table__header-row {
+  background: rgb(15, 23, 42) !important;
+  border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+}
+
+th {
+  color: rgb(100, 116, 139) !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.1em !important;
+  padding: 10px 16px !important;
+}
+
+tbody tr {
+  border-bottom: 1px solid rgba(255,255,255,0.04) !important;
+  transition: background 0.1s !important;
+}
+
+tbody tr:hover {
+  background: rgba(255,255,255,0.02) !important;
+}
+
+td {
+  color: rgb(226, 232, 240) !important;
+  font-size: 13px !important;
+  padding: 10px 16px !important;
+}
+
+/* ── 10. Form fields ────────────────────────────────────────── */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="search"],
+textarea,
+select,
+.rs__control,
+[class*="text-input"],
+[class*="textarea"] {
+  background-color: rgb(17, 28, 54) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  color: rgb(226, 232, 240) !important;
+  border-radius: 8px !important;
+  font-size: 13px !important;
+  transition: border-color 0.15s !important;
+}
+
+input:focus,
+textarea:focus,
+select:focus,
+.rs__control--is-focused {
+  border-color: rgb(16, 185, 129) !important;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.15) !important;
+  outline: none !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: rgb(71, 85, 105) !important;
+}
+
+/* Labels */
+label,
+.field-label,
+[class*="label"] {
+  color: rgb(148, 163, 184) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.02em !important;
+}
+
+/* ── 11. Buttons ────────────────────────────────────────────── */
+.btn--style-primary,
+[class*="btn--style-primary"],
+button[class*="btn"].btn--style-primary {
+  background: linear-gradient(135deg, rgb(16, 185, 129), rgb(5, 150, 105)) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 10px !important;
+  font-weight: 700 !important;
+  font-size: 13px !important;
+  letter-spacing: 0.01em !important;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25) !important;
+  transition: opacity 0.15s, transform 0.15s !important;
+}
+
+.btn--style-primary:hover {
+  opacity: 0.9 !important;
+  transform: translateY(-1px) !important;
+}
+
+.btn--style-secondary,
+[class*="btn--style-secondary"] {
+  background: rgba(255,255,255,0.06) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  color: rgb(226, 232, 240) !important;
+  border-radius: 10px !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  transition: background 0.15s !important;
+}
+
+.btn--style-secondary:hover {
+  background: rgba(255,255,255,0.10) !important;
+}
+
+/* Destructive / error button */
+.btn--style-error,
+[class*="btn--style-error"] {
+  background: rgba(239, 68, 68, 0.15) !important;
+  border: 1px solid rgba(239, 68, 68, 0.3) !important;
+  color: rgb(252, 165, 165) !important;
+  border-radius: 10px !important;
+}
+
+/* ── 12. Select / dropdown ──────────────────────────────────── */
+.rs__menu,
+.rs__menu-list,
+[class*="select__menu"] {
+  background-color: rgb(17, 28, 54) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  border-radius: 10px !important;
+  overflow: hidden !important;
+}
+
+.rs__option,
+[class*="select__option"] {
+  font-size: 13px !important;
+  color: rgb(226, 232, 240) !important;
+  background: transparent !important;
+  transition: background 0.1s !important;
+}
+
+.rs__option:hover,
+.rs__option--is-focused {
+  background: rgba(16, 185, 129, 0.12) !important;
+  color: rgb(52, 211, 153) !important;
+}
+
+.rs__option--is-selected,
+[class*="select__option--is-selected"] {
+  background: rgba(16, 185, 129, 0.2) !important;
+  color: rgb(52, 211, 153) !important;
+  font-weight: 600 !important;
+}
+
+/* ── 13. Breadcrumbs / step nav ─────────────────────────────── */
+.step-nav,
+[class*="step-nav"] {
+  color: rgb(100, 116, 139) !important;
+  font-size: 12px !important;
+}
+
+.step-nav a {
+  color: rgb(52, 211, 153) !important;
+  text-decoration: none !important;
+}
+
+/* ── 14. Status badges ──────────────────────────────────────── */
+[class*="status"],
+[class*="pill"] {
+  border-radius: 20px !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.06em !important;
+}
+
+/* ── 15. Scrollbars ─────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.1);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.2);
+}
+
+/* ── 16. Logo area ──────────────────────────────────────────── */
+.graphics-logo,
+[class*="Logo"],
+[class*="logo"] {
+  display: flex !important;
+  align-items: center !important;
+}
+
+/* ── 17. Dashboard default view ─────────────────────────────── */
+.dashboard__content,
+[class*="dashboard"] {
+  background: rgb(7, 12, 33) !important;
+}
+
+/* Dashboard "Collection Cards" */
+[class*="card__body"],
+[class*="collection-card"],
+[class*="CollectionCards"] > * {
+  background: rgb(15, 23, 42) !important;
+  border: 1px solid rgba(255,255,255,0.06) !important;
+  border-radius: 14px !important;
+  transition: border-color 0.15s, transform 0.15s !important;
+}
+
+[class*="card__body"]:hover,
+[class*="collection-card"]:hover {
+  border-color: rgba(16, 185, 129, 0.3) !important;
+  transform: translateY(-2px) !important;
+}
+
+/* Card headings */
+[class*="card__title"],
+[class*="collection-card__title"] {
+  color: rgb(255, 255, 255) !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+}
+
+/* Card counts */
+[class*="card__count"],
+[class*="collection-card__count"] {
+  color: var(--aicm-emerald) !important;
+  font-weight: 800 !important;
+}
+
+/* ── 18. Toasts ─────────────────────────────────────────────── */
+.Toastify__toast {
+  background: rgb(17, 28, 54) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  border-radius: 12px !important;
+  color: rgb(226, 232, 240) !important;
+  font-size: 13px !important;
+}
+
+.Toastify__toast--success {
+  border-color: rgba(16, 185, 129, 0.3) !important;
+}
+
+/* ── 19. Modal / Drawer ─────────────────────────────────────── */
+[class*="drawer__content"],
+[class*="modal__content"],
+.drawer__content,
+.modal__content {
+  background: rgb(10, 16, 40) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  border-radius: 16px !important;
+}
+
+/* ── 20. Typography fixes ───────────────────────────────────── */
+h1, h2, h3, h4, h5, h6 {
+  color: rgb(255, 255, 255) !important;
+}
+
+p, span {
+  font-size: 13px;
+}
+
+/* Payload's internal "gutter" heading */
+[class*="section-title"],
+[class*="heading"] {
+  color: rgb(226, 232, 240) !important;
+}
+
+/* Payload version badge */
+[class*="version"],
+.nav__version {
+  color: rgb(71, 85, 105) !important;
+  font-size: 10px !important;
+}
+
+/* ── 21. Collapsible field groups ───────────────────────────── */
+[class*="collapsible__toggle"],
+.collapsible__toggle {
+  background: rgb(15, 23, 42) !important;
+  border: 1px solid rgba(255,255,255,0.06) !important;
+  border-radius: 10px !important;
+  padding: 10px 14px !important;
+  color: rgb(148, 163, 184) !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.04em !important;
+}
+
+/* ── 22. Pagination ─────────────────────────────────────────── */
+[class*="pagination__page"],
+.pagination__page,
+.pagination__arrow {
+  background: rgb(15, 23, 42) !important;
+  border: 1px solid rgba(255,255,255,0.06) !important;
+  border-radius: 8px !important;
+  color: rgb(148, 163, 184) !important;
+  font-size: 12px !important;
+}
+
+[class*="pagination__page--is-active"],
+.pagination__page--is-active {
+  background: rgba(16, 185, 129, 0.15) !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+  color: rgb(52, 211, 153) !important;
+  font-weight: 700 !important;
+}
+
+/* ── 23. Search bar ─────────────────────────────────────────── */
+[class*="search-filter"],
+.search-filter__input {
+  background: rgb(17, 28, 54) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  border-radius: 8px !important;
+  color: rgb(226, 232, 240) !important;
+}
+
+/* ── 24. Payload logo override (hide default, show nothing) ─── */
+/* The custom Logo component will replace this entirely */
+.graphics-logo svg path {
+  fill: rgb(52, 211, 153) !important;
+}
