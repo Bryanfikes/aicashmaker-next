@@ -4,6 +4,7 @@ import { Analytics } from '@vercel/analytics/next'
 import Nav from '@/components/Nav'
 import Footer from '@/components/Footer'
 import AdUnit from '@/components/AdUnit'
+import { GTMHead, GTMNoscript } from '@/components/GoogleTagManager'
 import './globals.css'
 
 const inter = Inter({
@@ -36,6 +37,7 @@ export default function FrontendLayout({
   return (
     <html lang="en" className={inter.variable}>
       <head>
+        <GTMHead />
         {/* OTTO / Search Atlas dynamic optimization — must be in <head> for OTTO to verify connection */}
         <script
           id="sa-dynamic-optimization"
@@ -45,6 +47,7 @@ export default function FrontendLayout({
         />
       </head>
       <body className="font-sans">
+        <GTMNoscript />
         <Nav />
         {/* Leaderboard 728×90 — global, below nav */}
         <div className="bg-slate-50 border-b border-slate-100 py-2 px-4 hidden sm:flex justify-center overflow-hidden">

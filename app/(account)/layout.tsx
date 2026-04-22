@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+import { GTMHead, GTMNoscript } from '@/components/GoogleTagManager'
 import '../(frontend)/globals.css'
 
 const inter = Inter({
@@ -23,7 +24,11 @@ export default function AccountRootLayout({
 }) {
   return (
     <html lang="en" className={inter.variable}>
+      <head>
+        <GTMHead />
+      </head>
       <body className="font-sans bg-slate-50 text-slate-900">
+        <GTMNoscript />
         {children}
       </body>
     </html>
